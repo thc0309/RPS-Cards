@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+
+# Local development
+.codex-log/
+.codex/tmp/
+.codex/*.local.toml
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
