@@ -1,6 +1,6 @@
 # T01 — Bootstrap workspace and Expo development build
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -109,3 +109,14 @@ Nếu app config dùng TypeScript, thay `--config mobile/app.json` bằng file t
 
 - Game rules, real screens, assets, ads, Colyseus room, Skia, Supabase và CI.
 
+## Build evidence
+
+- `npm install` passed with one root `package-lock.json`; Expo SDK 57.0.10,
+  React 19.2.3, React Native 0.86.2, `expo-router`/`expo-dev-client` 57.0.10.
+- `npm run verify` passed: game-core 1 test, server 2 tests, mobile 1 smoke
+  test, typecheck, ESLint and server build.
+- `GET http://127.0.0.1:2567/health` returned `{ "ok": true }`.
+- `npm run mobile:android` completed Gradle `BUILD SUCCESSFUL`, installed
+  `app-debug.apk` and opened on `Android_TV_1080p`.
+- iOS prebuild and CocoaPods completed; `expo run:ios` is BLOCKED only because
+  no iOS simulator was booted (`No iOS devices available in Simulator.app`).

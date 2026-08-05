@@ -9,6 +9,23 @@
 .env.*
 !.env.example
 
+# Node and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Expo / native build output
+.expo/
+mobile/.expo/
+mobile/android/
+mobile/ios/
+mobile/.metro/
+mobile/web-build/
+*.ipa
+*.apk
+*.aab
+
 # IDE
 .idea/
 .vscode/

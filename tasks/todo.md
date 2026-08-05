@@ -1,14 +1,14 @@
 # Todo — RPS Cards MVP
 
-Status: planned; next task is T01
+Status: T01–T02 complete; next task is T03
 
 Chi tiết của mỗi task nằm trong `tasks/detail-tasks/`. Chỉ đánh dấu hoàn tất sau
 khi acceptance criteria và verification trong file tương ứng đã có evidence.
 
 ## Phase A — Foundation and deterministic core
 
-- [ ] [T01 — Workspace and Expo development build](detail-tasks/T01-workspace-expo-dev-build.md)
-- [ ] [T02 — Game-core match engine](detail-tasks/T02-game-core-match-engine.md) — depends on T01
+- [x] [T01 — Workspace and Expo development build](detail-tasks/T01-workspace-expo-dev-build.md) — verify xanh; Android build PASS; iOS simulator BLOCKED
+- [x] [T02 — Game-core match engine](detail-tasks/T02-game-core-match-engine.md) — verify xanh; five core tests pass
 - [ ] [T03 — Draft/random/exhaustive verification](detail-tasks/T03-draft-random-verification.md) — depends on T02
 - [ ] Checkpoint A recorded in `tasks/plan.md`
 

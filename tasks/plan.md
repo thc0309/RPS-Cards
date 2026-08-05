@@ -1,6 +1,6 @@
 # Implementation Plan — RPS Cards MVP
 
-Status: planned; awaiting `$vibe-build`
+Status: T01–T02 complete; T03 next
 
 `SPEC.md` là hợp đồng sản phẩm. File này chỉ ánh xạ thứ tự, phụ thuộc và
 checkpoint. Chi tiết kỹ thuật, file dự kiến, tiêu chí nghiệm thu và lệnh chạy
@@ -53,6 +53,13 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
 | T01 | npm workspaces, root command contract và Expo development build boot được | — | [T01](detail-tasks/T01-workspace-expo-dev-build.md) | `vibe-build`, `source-driven-development` |
 | T02 | Pure `classic_v1` match engine với legal locks, four-round lifecycle và unit tests | T01 | [T02](detail-tasks/T02-game-core-match-engine.md) | `vibe-test`, `api-and-interface-design` |
 | T03 | Draft/random boundary, exhaustive 864 cases và 10,000-match simulation | T02 | [T03](detail-tasks/T03-draft-random-verification.md) | `vibe-test`, `security-and-hardening` |
+
+T01 evidence: root `npm run verify` passed; server `/health` passed; Android
+development build installed/launched; iOS native prebuild/CocoaPods passed but
+simulator execution is blocked until a simulator is booted. T02 evidence:
+game-core TDD red/green completed; five core tests pass for all nine matchups,
+legal/illegal locks, simultaneous reveal, discard order, and exactly-four-round
+`MATCH_RESULT`; root `npm run verify` remains green.
 
 ### Phase B — P0 local playable slice
 

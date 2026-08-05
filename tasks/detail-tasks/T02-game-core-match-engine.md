@@ -1,6 +1,6 @@
 # T02 — Implement the pure `classic_v1` match engine
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -77,11 +77,15 @@ filter trong script contract thay vì thêm test framework thứ hai.
 
 ## Evidence to record
 
-- Tên failing test đầu tiên và output trước/sau implementation.
-- Test count cho matchup/phase/ownership cases.
-- `npm run verify` output.
+- TDD red: `npm run test --workspace game-core` initially failed at the missing
+  `./rules.js` and `./types.js` modules.
+- Green: five Node tests pass (one rules suite plus three match-state cases and
+  the existing ruleset smoke test), covering all nine ordered matchups,
+  reciprocal outcomes, immutable lock/reveal, ownership/reuse/phase guards,
+  discard order, and the four-round terminal transition.
+- `npm run verify` passes for game-core, server, and mobile (test, typecheck,
+  lint, and server build).
 
 ## Explicitly skipped
 
 - Draft/randomness (T03), bot UI, timers, networking, persistence và animations.
-
