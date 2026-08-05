@@ -15,6 +15,7 @@ export const en = {
   waitingOpponent: 'Waiting for opponent…',
   playersReady: 'Players connected',
   onlineOpponent: 'Opponent',
+  you: 'You',
   roomFull: 'This room is full.',
   roomExpired: 'This room has expired.',
   roomNotFound: 'Room not found.',

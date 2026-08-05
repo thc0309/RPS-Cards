@@ -99,12 +99,15 @@ Chỉ chạy install block sau khi decision evidence đã tồn tại.
 
 - Added root SafeAreaProvider/SafeAreaView, localized accessibility hints/state,
   44dp-or-larger targets, and reduced-motion behavior that removes card lift.
-- Mobile typecheck/lint and 12-suite / 25-test suite pass; board remains symmetric
+- Mobile typecheck/lint and 14-suite / 33-test suite pass; board remains symmetric
   upper/lower View zones.
 - `docs/assets` inventory is 34 PNGs (~33 MB); no bitmap is copied/mounted because
   current UI uses native text/View surfaces. Decision: `SKIA_NOT_NEEDED`.
-- TalkBack/VoiceOver, font-scale matrix and 60fps traces are not claimed: iOS
-  target is unavailable and no native profiling runner is installed. Explicit T14 BLOCKED.
+- Physical Pixel 4a renders Home, Draft, Board and Result; the board has symmetric
+  folk zones with a neutral center. This is partial visual evidence, not the full
+  320/360 dp, font-scale or interaction matrix.
+- TalkBack/VoiceOver and 60fps traces are not claimed: the iOS target is unavailable
+  and no native profiling runner is installed. Explicit T14 BLOCKED.
 
 ## Explicitly skipped
 

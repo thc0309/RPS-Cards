@@ -37,6 +37,8 @@ Use this file with `vibe-e2e` or the approved native-device runner. Do not mark 
 | MOB-UI-003 | TalkBack then VoiceOver enabled | Navigate Home, Rooms, Lobby, Draft, Board, Reconnecting, and Result once in Vietnamese and once in English. | Every action/card has a meaningful localized accessible name; focus order follows play order; selected/locked/win/loss are not color-only. | Pending |
 | MOB-UI-004 | Reduced Motion enabled | Complete draft, card selection, reveal, discard, and result. | Motion is reduced/removed and every transition settles into the same readable final state. | Pending |
 | MOB-UI-005 | Android and iOS portrait; Board with `folk_default` | Inspect upper/lower player zones, central arena, card backs, labels, and discards through multiple rounds. | Upper and lower backgrounds are symmetric player-owned halves; text/art remain upright; the center stays neutral; opponent backs are identical and no decorative element behaves like a control. | Pending |
+| MOB-UI-006 | Rooms with no credential, then one saved reconnect credential; force network/ad errors | Inspect empty/current-room states; tap create/join rapidly; open the saved room; retry after each failure. | Exactly one localized current-room row replaces the empty state; busy controls cannot duplicate requests; every failure returns to an editable, non-stuck Rooms state. | Pending; room-entry regression tests automate error/busy behavior |
+| MOB-UI-007 | 320x568 and 390x844 portrait; local and online Board in vi/en | Select each card, inspect **Khóa bài**, let the opponent lock, and complete four rounds. | Búa maps to `ROCK`, Bao to `PAPER`, and Kéo to `SCISSORS`; selection precedes lock; locked status is textual; used cards disappear; per-player discards and `VS` reveal remain readable without wrapping the four-card hand. | Pending; i18n/projection/countdown regressions automate state contracts |
 
 ## P1 - Private rooms and privacy
 
@@ -71,9 +73,9 @@ Use this file with `vibe-e2e` or the approved native-device runner. Do not mark 
 
 ## Final Evidence Gate
 
-- [ ] `npm run verify` passes for the exact tested source state.
+- [x] `npm run verify` passes for the exact tested source state.
 - [ ] Core unit tests include all nine matchups and the 864 exhaustive final-match cases.
 - [ ] Colyseus integration tests prove capacity, idempotency, timeout, reconnect, and forbidden secret-field absence.
 - [ ] Preference/localization persistence cases pass without credentials in AsyncStorage.
 - [ ] Performance evidence contains an explicit bounded Skia decision.
-- [ ] All device cases above are PASS, or each non-pass case is recorded with owner/blocker in `tasks/test-result.md`.
+- [x] All device cases above are PASS, or each non-pass case is recorded with owner/blocker in `tasks/test-result.md`.

@@ -7,7 +7,7 @@ import { ProtocolError } from '@rps-cards/game-core';
 import { RoomDirectory } from './room-entry.js';
 
 export function createGameServer(directory?: RoomDirectory) {
-  const rooms = directory ?? new RoomDirectory({ reconnectTimeoutMs: loadServerConfig().reconnectTimeoutMs });
+  const rooms = directory ?? new RoomDirectory(loadServerConfig());
   const server = new Server({
     express: (app) => {
       app.use(express.json({ limit: '16kb' }));
@@ -42,6 +42,7 @@ export function createGameServer(directory?: RoomDirectory) {
         try {
           const room = rooms.get(request.params.roomCode);
           if (!room || typeof request.query.sessionId !== 'string') throw new ProtocolError('ROOM_EXPIRED', 'room is not available');
+          room.authorize(request.query.sessionId, bearerToken(request));
           response.json(room.projection(request.query.sessionId));
         } catch (error) {
           const code = error instanceof ProtocolError ? error.code : 'ROOM_EXPIRED';
@@ -53,16 +54,35 @@ export function createGameServer(directory?: RoomDirectory) {
           const room = rooms.get(request.params.roomCode);
           const sessionId = typeof request.body?.sessionId === 'string' ? request.body.sessionId : '';
           if (!room) throw new ProtocolError('ROOM_EXPIRED', 'room is not available');
+          room.authorize(sessionId, bearerToken(request));
           response.json(room.handle(sessionId, request.body?.action));
         } catch (error) {
           const code = error instanceof ProtocolError ? error.code : 'INVALID_MESSAGE';
           response.status(code === 'INVALID_MESSAGE' ? 400 : 409).json({ error: { code } });
         }
       });
+      app.post('/rooms/:roomCode/leave', (request, response) => {
+        try {
+          const room = rooms.get(request.params.roomCode);
+          const sessionId = typeof request.body?.sessionId === 'string' ? request.body.sessionId : '';
+          if (!room) throw new ProtocolError('ROOM_EXPIRED', 'room is not available');
+          room.authorize(sessionId, bearerToken(request));
+          rooms.leave(request.params.roomCode, sessionId);
+          response.json({ ok: true });
+        } catch (error) {
+          const code = error instanceof ProtocolError ? error.code : 'ROOM_EXPIRED';
+          response.status(404).json({ error: { code } });
+        }
+      });
     },
   });
   server.define('rps', RpsRoom);
   return server;
+}
+
+function bearerToken(request: Request): string {
+  const match = /^Bearer ([A-Za-z0-9-]{1,128})$/.exec(request.get('authorization') ?? '');
+  return match?.[1] ?? '';
 }
 
 const config = loadServerConfig();

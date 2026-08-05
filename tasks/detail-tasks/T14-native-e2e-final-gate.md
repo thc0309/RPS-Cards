@@ -73,9 +73,10 @@ test result; không tự thêm Maestro/Detox trong task này.
 ## Evidence to record
 
 - Exact source state is an uncommitted working tree; no commit was created.
-- `npm run verify` passes: game-core 13/13, server 17/17, mobile 12 suites / 25
+- `npm run verify` passes: game-core 13/13, server 23/23, mobile 14 suites / 33
   tests, typecheck/lint/build all pass. `git diff --check` is in `tasks/test-result.md`.
-- Android Expo development build rebuilt, installed and opened on `Pixel_4a` (exit 0).
+- Exact-source Android Expo development build rebuilt for `arm64-v8a`, installed
+  and opened on physical `Pixel_4a` (exit 0); the missing splash module error is fixed.
   iOS planning reached CocoaPods/Xcode but is BLOCKED because no iOS 26.2 runtime
   exists for the selected destination.
 - Per-case native PASS/BLOCKED records are in `tasks/test-result.md`; physical

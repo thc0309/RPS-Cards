@@ -17,4 +17,12 @@ describe('interstitial gate', () => {
     await expect(first).resolves.toBe('closed');
     expect(calls).toBe(1);
   });
+
+  it('gives the provider the same timeout so native listeners can stop on time', async () => {
+    let receivedTimeout = 0;
+    const gate = createInterstitialGate({ attempt: async (timeoutMs: number) => { receivedTimeout = timeoutMs; return 'timeout'; } }, 123);
+
+    await expect(gate.attemptInterstitial()).resolves.toBe('timeout');
+    expect(receivedTimeout).toBe(123);
+  });
 });

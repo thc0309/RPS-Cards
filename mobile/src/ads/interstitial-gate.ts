@@ -1,7 +1,7 @@
 export type AdOutcome = 'shown' | 'closed' | 'failed' | 'timeout' | 'no-fill';
 
 export interface InterstitialProvider {
-  readonly attempt: () => Promise<AdOutcome>;
+  readonly attempt: (timeoutMs: number) => Promise<AdOutcome>;
 }
 
 function nativeProvider(): InterstitialProvider {
@@ -13,13 +13,16 @@ function nativeProvider(): InterstitialProvider {
       readonly InterstitialAd: { createForAdRequest: (id: string) => { addAdEventListener: (event: string, callback: (error?: unknown) => void) => () => void; load: () => void; show: () => Promise<void> } };
       readonly TestIds: { readonly INTERSTITIAL: string };
     };
-    return { attempt: () => new Promise<AdOutcome>((resolve) => {
+    return { attempt: (timeoutMs) => new Promise<AdOutcome>((resolve) => {
       const ad = native.InterstitialAd.createForAdRequest(native.TestIds.INTERSTITIAL);
       let settled = false;
-      const settle = (outcome: AdOutcome) => { if (!settled) { settled = true; resolve(outcome); } };
-      ad.addAdEventListener(native.AdEventType.LOADED, () => { void ad.show().then(() => settle('shown')).catch(() => settle('failed')); });
-      ad.addAdEventListener(native.AdEventType.CLOSED, () => settle('closed'));
-      ad.addAdEventListener(native.AdEventType.ERROR, () => settle('failed'));
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const removers: (() => void)[] = [];
+      const settle = (outcome: AdOutcome) => { if (!settled) { settled = true; if (timer) clearTimeout(timer); removers.forEach((remove) => remove()); resolve(outcome); } };
+      removers.push(ad.addAdEventListener(native.AdEventType.LOADED, () => { void ad.show().catch(() => settle('failed')); }));
+      removers.push(ad.addAdEventListener(native.AdEventType.CLOSED, () => settle('closed')));
+      removers.push(ad.addAdEventListener(native.AdEventType.ERROR, () => settle('failed')));
+      timer = setTimeout(() => settle('timeout'), timeoutMs);
       ad.load();
     }) };
   } catch {
@@ -33,8 +36,9 @@ export function createInterstitialGate(provider: InterstitialProvider = nativePr
     attemptInterstitial: () => {
       if (inFlight) return inFlight;
       inFlight = new Promise<AdOutcome>((resolve) => {
+        const attempt = provider.attempt(timeoutMs);
         const timer = setTimeout(() => resolve('timeout'), timeoutMs);
-        provider.attempt().then(resolve).catch(() => resolve('failed')).finally(() => clearTimeout(timer));
+        attempt.then(resolve).catch(() => resolve('failed')).finally(() => clearTimeout(timer));
       }).finally(() => { inFlight = null; });
       return inFlight;
     },

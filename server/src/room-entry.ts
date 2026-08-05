@@ -8,11 +8,11 @@ export type RoomSession = { readonly roomCode: string; readonly sessionId: strin
 
 export class RoomDirectory {
   private readonly rooms = new Map<string, OnlineRoomController>();
-  constructor(private readonly options: { readonly reconnectTimeoutMs?: number } = {}) {}
+  constructor(private readonly options: { readonly reconnectTimeoutMs?: number; readonly draftSelectionTimeoutMs?: number; readonly roundSelectionTimeoutMs?: number } = {}) {}
 
   create(): { readonly roomCode: string; readonly sessionId: string; readonly reconnectToken: string } {
     const code = allocateRoomCode(new Set(this.rooms.keys()));
-    const room = new OnlineRoomController(code, this.options.reconnectTimeoutMs === undefined ? {} : { reconnectTimeoutMs: this.options.reconnectTimeoutMs });
+    const room = new OnlineRoomController(code, this.options);
     const sessionId = randomUUID();
     room.join(sessionId);
     this.rooms.set(code, room);
@@ -22,6 +22,7 @@ export class RoomDirectory {
   validate(roomCode: string): RoomEntryStatus {
     const room = this.rooms.get(roomCode);
     if (!room) return 'expired';
+    if (room.isClosed) return 'expired';
     return room.playerCount === 2 ? 'full' : 'available';
   }
 
@@ -32,7 +33,7 @@ export class RoomDirectory {
     try {
       return { roomCode, sessionId, seat: room.join(sessionId), reconnectToken: room.reconnectToken(sessionId) };
     } catch (error) {
-      if (error instanceof ProtocolError && error.code === 'ROOM_FULL') throw error;
+      if (error instanceof ProtocolError) throw error;
       throw new ProtocolError('ROOM_NOT_FOUND', 'room is not available');
     }
   }
@@ -48,6 +49,11 @@ export class RoomDirectory {
   disconnect(roomCode: string, sessionId: string): void {
     const room = this.rooms.get(roomCode);
     if (room) room.disconnect(sessionId);
+  }
+
+  leave(roomCode: string, sessionId: string): void {
+    const room = this.rooms.get(roomCode);
+    if (room) room.leave(sessionId);
   }
 
   get(roomCode: string): OnlineRoomController | undefined { return this.rooms.get(roomCode); }

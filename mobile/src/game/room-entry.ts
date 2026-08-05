@@ -26,6 +26,13 @@ export type RoomEntryResult =
 export function normalizeRoomCode(value: string): string { return value.trim().toUpperCase(); }
 export function isRoomCode(value: string): boolean { return /^[A-HJ-NP-Z2-9]{5}$/.test(value); }
 
+function roomEntryError(error: unknown): RoomEntryError {
+  if (error instanceof Error) {
+    if (error.message === 'ROOM_NOT_FOUND' || error.message === 'ROOM_FULL' || error.message === 'ROOM_EXPIRED') return error.message;
+  }
+  return 'ENTRY_FAILED';
+}
+
 export function createRoomEntryFlow(transport: RoomTransport, adGate: RoomAdGate, callbacks: RoomEntryCallbacks): RoomEntryFlow {
   let inFlight: Promise<RoomEntryResult> | null = null;
   let operation = 0;
@@ -38,33 +45,33 @@ export function createRoomEntryFlow(transport: RoomTransport, adGate: RoomAdGate
     isBusy: () => inFlight !== null,
     createRoom: () => run(async () => {
       const operationId = `create-${++operation}`;
-      await adGate.attemptInterstitial();
       try {
+        await adGate.attemptInterstitial();
         const created = await transport.createRoom(operationId);
         if (created.reconnectToken && callbacks.saveCredential) await callbacks.saveCredential({ roomCode: created.roomCode, sessionId: created.sessionId, reconnectToken: created.reconnectToken });
         callbacks.openLobby(created.roomCode, created.sessionId);
         return { ok: true, roomCode: created.roomCode, sessionId: created.sessionId, reconnectToken: created.reconnectToken };
-      } catch {
-        return { ok: false, code: 'ENTRY_FAILED', roomCode: '' };
+      } catch (error) {
+        return { ok: false, code: roomEntryError(error), roomCode: '' };
       }
     }),
     joinRoom: (rawCode: string) => run(async () => {
       const roomCode = normalizeRoomCode(rawCode);
       if (!isRoomCode(roomCode)) return { ok: false, code: 'INVALID_CODE', roomCode };
-      const first = await transport.validateRoom(roomCode);
-      if (first !== 'available') return { ok: false, code: first === 'full' ? 'ROOM_FULL' : 'ROOM_EXPIRED', roomCode };
-      await adGate.attemptInterstitial();
-      const second = await transport.validateRoom(roomCode);
-      if (second !== 'available') return { ok: false, code: second === 'full' ? 'ROOM_FULL' : 'ROOM_EXPIRED', roomCode };
       try {
+        const first = await transport.validateRoom(roomCode);
+        if (first !== 'available') return { ok: false, code: first === 'full' ? 'ROOM_FULL' : 'ROOM_EXPIRED', roomCode };
+        await adGate.attemptInterstitial();
+        const second = await transport.validateRoom(roomCode);
+        if (second !== 'available') return { ok: false, code: second === 'full' ? 'ROOM_FULL' : 'ROOM_EXPIRED', roomCode };
         let sessionId = `guest-${operation + 1}`;
         try { sessionId = await getOrCreateGuestId(); } catch { /* test/runtime without SecureStore; server token still protects reconnect */ }
         const joined = await transport.joinRoom(roomCode, sessionId, `join-${++operation}`);
         if (joined.reconnectToken && callbacks.saveCredential) await callbacks.saveCredential({ roomCode: joined.roomCode, sessionId: joined.sessionId, reconnectToken: joined.reconnectToken });
         callbacks.openLobby(joined.roomCode, joined.sessionId);
         return { ok: true, roomCode: joined.roomCode, sessionId: joined.sessionId, reconnectToken: joined.reconnectToken };
-      } catch {
-        return { ok: false, code: 'ENTRY_FAILED', roomCode };
+      } catch (error) {
+        return { ok: false, code: roomEntryError(error), roomCode };
       }
     }),
   };

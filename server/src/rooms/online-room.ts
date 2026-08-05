@@ -18,7 +18,7 @@ import {
   type RoomProjection,
 } from '@rps-cards/game-core';
 import { ProtocolError } from '@rps-cards/game-core';
-import { randomUUID } from 'node:crypto';
+import { randomInt as secureRandomInt, randomUUID } from 'node:crypto';
 import { MessageRateLimiter } from '../rate-limit.js';
 
 export interface OnlineTimerApi {
@@ -31,22 +31,15 @@ const defaultTimer: OnlineTimerApi = {
   clearTimeout: (handle) => globalThis.clearTimeout(handle as ReturnType<typeof setTimeout>),
 };
 
-const cryptoRandomInt = (maxExclusive: number): number => {
-  const crypto = globalThis.crypto;
-  if (crypto?.getRandomValues) {
-    const values = new Uint32Array(1);
-    crypto.getRandomValues(values);
-    return values[0]! % maxExclusive;
-  }
-  return Math.floor(Math.random() * maxExclusive);
-};
+const cryptoRandomInt = (maxExclusive: number): number => secureRandomInt(maxExclusive);
 
 type OperationResult = { readonly fingerprint: string; readonly result: RoomProjection };
-type PlayerRecord = { readonly seat: PlayerId; readonly ready: boolean; readonly connected: boolean; readonly reconnectToken: string; readonly reservationExpired: boolean };
+type PlayerRecord = { readonly seat: PlayerId; readonly ready: boolean; readonly connected: boolean; readonly reconnectToken: string; readonly reservationExpired: boolean; readonly lastSeenAt: number };
 
 export class OnlineRoomController {
   readonly roomCode: string;
   get playerCount(): number { return this.players.size; }
+  get isClosed(): boolean { return this.closed; }
   get reconnectTimeoutMs(): number { return this.reservationMs; }
   get idempotencySize(): number { return this.operations.size; }
   private readonly players = new Map<string, PlayerRecord>();
@@ -55,6 +48,8 @@ export class OnlineRoomController {
   private readonly timer: OnlineTimerApi;
   private readonly now: () => number;
   private readonly reservationMs: number;
+  private readonly draftSelectionTimeoutMs: number;
+  private readonly roundSelectionTimeoutMs: number;
   private readonly reservations = new Map<string, unknown>();
   private readonly limiter: MessageRateLimiter;
   private draft: DraftState | null = null;
@@ -62,28 +57,33 @@ export class OnlineRoomController {
   private forfeitResult: MatchResult | null = null;
   private deadlineAt: number | null = null;
   private timerHandle: unknown = null;
+  private closed = false;
 
   constructor(
     roomCode: string,
-    options: { readonly randomInt?: (maxExclusive: number) => number; readonly timer?: OnlineTimerApi; readonly now?: () => number; readonly reconnectTimeoutMs?: number; readonly maxMessagesPerSecond?: number } = {},
+    options: { readonly randomInt?: (maxExclusive: number) => number; readonly timer?: OnlineTimerApi; readonly now?: () => number; readonly reconnectTimeoutMs?: number; readonly draftSelectionTimeoutMs?: number; readonly roundSelectionTimeoutMs?: number; readonly maxMessagesPerSecond?: number } = {},
   ) {
     this.roomCode = roomCode;
     this.randomInt = options.randomInt ?? cryptoRandomInt;
     this.timer = options.timer ?? defaultTimer;
     this.now = options.now ?? (() => Date.now());
     this.reservationMs = options.reconnectTimeoutMs ?? 25_000;
+    this.draftSelectionTimeoutMs = options.draftSelectionTimeoutMs ?? 5_000;
+    this.roundSelectionTimeoutMs = options.roundSelectionTimeoutMs ?? 15_000;
     this.limiter = new MessageRateLimiter(options.maxMessagesPerSecond === undefined ? { now: this.now } : { maxMessagesPerSecond: options.maxMessagesPerSecond, now: this.now });
   }
 
   join(sessionId: string): PlayerId {
+    this.expireInactivePlayers();
     const existing = this.players.get(sessionId);
     if (existing) {
       if (existing.reservationExpired) throw new ProtocolError('ROOM_EXPIRED', 'reconnect reservation expired');
       return existing.seat;
     }
+    if (this.closed) throw new ProtocolError('ROOM_EXPIRED', 'room is not available');
     if (this.players.size >= 2) throw new ProtocolError('ROOM_FULL', 'room already has two players');
     const seat: PlayerId = this.players.size === 0 ? 'PLAYER_A' : 'PLAYER_B';
-    this.players.set(sessionId, { seat, ready: false, connected: true, reconnectToken: randomUUID(), reservationExpired: false });
+    this.players.set(sessionId, { seat, ready: false, connected: true, reconnectToken: randomUUID(), reservationExpired: false, lastSeenAt: this.now() });
     if (this.players.size === 2 && !this.draft && !this.match) this.startDraft();
     return seat;
   }
@@ -92,6 +92,15 @@ export class OnlineRoomController {
     const record = this.players.get(sessionId);
     if (!record || record.reservationExpired) throw new ProtocolError('ROOM_EXPIRED', 'reconnect reservation expired');
     return record.reconnectToken;
+  }
+
+  authorize(sessionId: string, reconnectToken: string): void {
+    this.expireInactivePlayers();
+    const record = this.players.get(sessionId);
+    if (!record || record.reservationExpired || record.reconnectToken !== reconnectToken) {
+      throw new ProtocolError('ROOM_EXPIRED', 'room is not available');
+    }
+    this.players.set(sessionId, { ...record, lastSeenAt: this.now() });
   }
 
   disconnect(sessionId: string): void {
@@ -103,20 +112,24 @@ export class OnlineRoomController {
   }
 
   reconnect(sessionId: string, token: string): PlayerId {
+    this.expireInactivePlayers();
     const record = this.players.get(sessionId);
     if (!record || record.reservationExpired || record.reconnectToken !== token) throw new ProtocolError('ROOM_EXPIRED', 'reconnect reservation expired');
     if (record.connected) return record.seat;
     const reservation = this.reservations.get(sessionId);
     if (reservation !== undefined) this.timer.clearTimeout(reservation);
     this.reservations.delete(sessionId);
-    this.players.set(sessionId, { ...record, connected: true });
+    this.players.set(sessionId, { ...record, connected: true, lastSeenAt: this.now() });
     return record.seat;
   }
 
   leave(sessionId: string): void {
     this.clearReservation(sessionId);
-    this.players.delete(sessionId);
-    if (this.players.size < 2 && this.phase() !== 'MATCH_RESULT') this.clearDeadline();
+    const record = this.players.get(sessionId);
+    if (!record || record.reservationExpired) return;
+    this.closed = true;
+    this.players.set(sessionId, { ...record, connected: false });
+    this.expireReservation(sessionId);
   }
 
   dispose(): void {
@@ -161,7 +174,8 @@ export class OnlineRoomController {
     const record = this.players.get(sessionId);
     if (!record || record.connected || record.reservationExpired) return;
     this.players.set(sessionId, { ...record, reservationExpired: true });
-    const opponent = [...this.players.values()].find((player) => player.seat !== record.seat);
+    const opponent = [...this.players.values()].find((player) => player.seat !== record.seat && !player.reservationExpired);
+    if (!opponent) this.closed = true;
     if (opponent) {
       const scores = this.match?.result?.scores ?? {
         PLAYER_A: this.match?.players.PLAYER_A.score ?? 0,
@@ -171,6 +185,15 @@ export class OnlineRoomController {
       this.match = this.match ? { ...this.match, phase: 'MATCH_RESULT', result: this.forfeitResult } : null;
     }
     this.clearDeadline();
+  }
+
+  private expireInactivePlayers(): void {
+    const now = this.now();
+    for (const [sessionId, record] of this.players) {
+      if (!record.connected || record.reservationExpired || now - record.lastSeenAt < this.reservationMs) continue;
+      this.players.set(sessionId, { ...record, connected: false });
+      this.expireReservation(sessionId);
+    }
   }
 
   private clearReservation(sessionId: string): void {
@@ -192,9 +215,9 @@ export class OnlineRoomController {
       const result = completeDraft(this.draft);
       this.match = createMatch(result.hands);
       this.draft = null;
-      this.scheduleDeadline(15_000);
+      this.scheduleDeadline(this.roundSelectionTimeoutMs);
     } else {
-      this.scheduleDeadline(5_000);
+      this.scheduleDeadline(this.draftSelectionTimeoutMs);
     }
   }
 
@@ -225,7 +248,7 @@ export class OnlineRoomController {
     this.match = null;
     this.forfeitResult = null;
     this.draft = createDraft(this.randomInt);
-    this.scheduleDeadline(5_000);
+    this.scheduleDeadline(this.draftSelectionTimeoutMs);
   }
 
   private resolveRound(): void {
@@ -234,7 +257,7 @@ export class OnlineRoomController {
     this.clearDeadline();
     if (this.match.phase === 'ROUND_RESULT') {
       this.match = beginNextRound(this.match);
-      this.scheduleDeadline(15_000);
+      this.scheduleDeadline(this.roundSelectionTimeoutMs);
     }
   }
 
@@ -252,8 +275,8 @@ export class OnlineRoomController {
         if (this.draft.phase === 'DRAFT_COMPLETE') {
           this.match = createMatch(completeDraft(this.draft).hands);
           this.draft = null;
-          this.scheduleDeadline(15_000);
-        } else this.scheduleDeadline(5_000);
+          this.scheduleDeadline(this.roundSelectionTimeoutMs);
+        } else this.scheduleDeadline(this.draftSelectionTimeoutMs);
       }
       return;
     }
@@ -283,13 +306,12 @@ export class OnlineRoomController {
 
   private buildProjection(ownSeat: PlayerId): RoomProjection {
     const matchPlayers = this.match?.players;
-    const publicDiscards = this.match?.discards.map(({ cardId, kind }) => ({ cardId, kind })) ?? [];
-    const players = (['PLAYER_A', 'PLAYER_B'] as const).map((seat) => ({
+    const players = [...this.players.values()].map(({ seat }) => ({
       seat,
       cardCount: matchPlayers ? matchPlayers[seat].cards.filter((card) => !card.used).length : 0,
       locked: matchPlayers?.[seat].lockedCardId !== null && matchPlayers?.[seat].lockedCardId !== undefined,
       score: matchPlayers?.[seat].score ?? 0,
-      discards: publicDiscards,
+      discards: this.match?.discards.filter((card) => card.playerId === seat).map(({ cardId, kind }) => ({ cardId, kind })) ?? [],
       cardSkinId: 'folk_default' as const,
       boardThemeId: 'folk_default' as const,
     }));

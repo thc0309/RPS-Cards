@@ -42,4 +42,33 @@ describe('room entry flow', () => {
     await first;
     expect(calls).toEqual(['ad', 'create', 'lobby']);
   });
+
+  it('contains validation failures and clears the busy state', async () => {
+    const flow = createRoomEntryFlow({
+      createRoom: async () => ({ roomCode: 'ABCD2', sessionId: 's-a' }),
+      validateRoom: async () => { throw new Error('offline'); },
+      joinRoom: async () => ({ roomCode: 'ABCD2', sessionId: 's-b', seat: 'PLAYER_B' }),
+    }, { attemptInterstitial: async () => 'closed' }, { openLobby: () => undefined });
+    await expect(flow.joinRoom('ABCD2')).resolves.toEqual({ ok: false, code: 'ENTRY_FAILED', roomCode: 'ABCD2' });
+    expect(flow.isBusy()).toBe(false);
+  });
+
+  it('preserves a late authoritative room error', async () => {
+    const flow = createRoomEntryFlow({
+      createRoom: async () => ({ roomCode: 'ABCD2', sessionId: 's-a' }),
+      validateRoom: async () => 'available',
+      joinRoom: async () => { throw new Error('ROOM_FULL'); },
+    }, { attemptInterstitial: async () => 'closed' }, { openLobby: () => undefined });
+    await expect(flow.joinRoom('ABCD2')).resolves.toEqual({ ok: false, code: 'ROOM_FULL', roomCode: 'ABCD2' });
+  });
+
+  it('contains ad failures for create and clears the busy state', async () => {
+    const flow = createRoomEntryFlow({
+      createRoom: async () => ({ roomCode: 'ABCD2', sessionId: 's-a' }),
+      validateRoom: async () => 'available',
+      joinRoom: async () => ({ roomCode: 'ABCD2', sessionId: 's-b', seat: 'PLAYER_B' }),
+    }, { attemptInterstitial: async () => { throw new Error('ad failure'); } }, { openLobby: () => undefined });
+    await expect(flow.createRoom()).resolves.toEqual({ ok: false, code: 'ENTRY_FAILED', roomCode: '' });
+    expect(flow.isBusy()).toBe(false);
+  });
 });

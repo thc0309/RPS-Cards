@@ -12,6 +12,7 @@ export function ReconnectingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ roomCode?: string; sessionId?: string }>();
   const locale = useAppStore((state) => state.locale);
+  const setActiveRoom = useAppStore((state) => state.setActiveRoom);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   useEffect(() => {
     let active = true;
@@ -34,6 +35,7 @@ export function ReconnectingScreen() {
         } catch (error) {
           if (String(error).includes('ROOM_EXPIRED')) {
             await deleteReconnectCredential();
+            setActiveRoom(null);
             if (active) router.replace({ pathname: '/rooms', params: { error: 'ROOM_EXPIRED' } });
             return;
           }
@@ -43,7 +45,7 @@ export function ReconnectingScreen() {
     };
     void run();
     return () => { active = false; };
-  }, [params.roomCode, params.sessionId, router]);
+  }, [params.roomCode, params.sessionId, router, setActiveRoom]);
   return <View style={styles.container}><Text accessibilityRole="header" style={styles.title}>{text('reconnecting')}</Text><Text style={styles.body}>{text('reconnectingBody')}</Text></View>;
 }
 

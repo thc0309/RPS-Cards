@@ -94,6 +94,7 @@ rtk npm run typecheck
 rtk npm run lint
 rtk npm run build:server
 rtk npm run verify           # toàn bộ test/typecheck/lint/build
+rtk npx expo-doctor          # kiểm tra compatibility Expo/native package
 rtk npm audit --audit-level=high
 rtk git diff --check
 ```
@@ -120,9 +121,23 @@ thực tế nằm trong [tasks/test-result.md](tasks/test-result.md).
 | `POST` | `/rooms/reconnect` | Khôi phục session bằng credential |
 | `GET` | `/rooms/:roomCode/snapshot?sessionId=...` | Lấy projection an toàn theo player |
 | `POST` | `/rooms/:roomCode/action` | Gửi action đã validate |
+| `POST` | `/rooms/:roomCode/leave` | Rời phòng ngay và giải phóng room lifecycle |
 
 Room là in-memory và tối đa hai player. Restart server làm room cũ hết hạn;
 client sẽ xóa credential SecureStore và hiển thị `ROOM_EXPIRED`.
+
+Snapshot, action và leave bắt buộc header `Authorization: Bearer <reconnectToken>`;
+token không được đặt trong URL hoặc body gameplay.
+
+Nếu clean Android build báo `No space left on device`, giải phóng vài GiB rồi
+chạy lại:
+
+```bash
+cd mobile/android
+rtk ./gradlew clean
+cd ../..
+rtk npm run mobile:android
+```
 
 ## Cấu trúc chính
 

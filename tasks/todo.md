@@ -32,5 +32,5 @@ khi acceptance criteria và verification trong file tương ứng đã có evide
 
 - [x] [T12 — Security and observability](detail-tasks/T12-security-observability.md) — boundary/rate/log/audit checks pass; moderate transitive audit findings documented
 - [ ] [T13 — UI accessibility and performance](detail-tasks/T13-ui-accessibility-performance.md) — implementation pass; screen-reader/font-scale/60fps device evidence blocked
-- [ ] [T14 — Native E2E final gate](detail-tasks/T14-native-e2e-final-gate.md) — Android emulator smoke pass; iOS/two-device native cases blocked
+- [ ] [T14 — Native E2E final gate](detail-tasks/T14-native-e2e-final-gate.md) — exact-source Android build/install/startup PASS on Pixel 4a; full Android, iOS and two-device cases remain blocked/pending
 - [ ] Checkpoint D recorded in `tasks/plan.md`

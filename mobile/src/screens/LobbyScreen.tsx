@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { createOnlineRoomClient } from '../game/colyseus-client';
@@ -13,30 +13,40 @@ export function LobbyScreen() {
   const locale = useAppStore((state) => state.locale);
   const setActiveRoom = useAppStore((state) => state.setActiveRoom);
   const [snapshot, setSnapshot] = useState<RoomProjection | null>(null);
+  const client = useMemo(() => createOnlineRoomClient(), []);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   useEffect(() => {
     if (!params.roomCode || !params.sessionId) { router.replace('/rooms'); return; }
-    const client = createOnlineRoomClient();
     let active = true;
+    let polling = false;
     const poll = async () => {
+      if (polling) return;
+      polling = true;
       try { const next = await client.snapshot(params.roomCode!, params.sessionId!); if (active) setSnapshot(next); } catch { if (active) router.replace({ pathname: '/reconnecting', params: { roomCode: params.roomCode, sessionId: params.sessionId } }); }
+      finally { polling = false; }
     };
     void poll();
     const handle = setInterval(() => { void poll(); }, 1_000);
     return () => { active = false; clearInterval(handle); };
-  }, [params.roomCode, params.sessionId, router]);
+  }, [client, params.roomCode, params.sessionId, router]);
   useEffect(() => {
     if (snapshot && snapshot.phase !== 'WAITING') router.replace({ pathname: '/draft', params: { roomCode: params.roomCode, sessionId: params.sessionId } });
   }, [params.roomCode, params.sessionId, router, snapshot]);
   if (!params.roomCode || !params.sessionId) return null;
+  const leave = async () => {
+    try { await client.leave(params.roomCode!, params.sessionId!); } catch { /* heartbeat expiry closes an unreachable room */ }
+    await deleteReconnectCredential();
+    setActiveRoom(null);
+    router.replace('/rooms');
+  };
   return (
     <View style={styles.container}>
       <Text accessibilityRole="header" style={styles.title}>{text('lobbyTitle')}</Text>
       <Text style={styles.label}>{text('roomCode')}</Text>
       <Text selectable style={styles.code}>{params.roomCode}</Text>
-      <Text style={styles.status}>{text('playersReady')}: {snapshot?.players.filter((player) => player.cardCount >= 0).length ?? 1} / 2</Text>
+      <Text accessibilityLiveRegion="polite" style={styles.status}>{text('playersReady')}: {snapshot?.players.length ?? 1} / 2</Text>
       <Text style={styles.waiting}>{text('waitingOpponent')}</Text>
-      <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => { void deleteReconnectCredential(); setActiveRoom(null); router.replace('/rooms'); }}><Text style={styles.secondaryText}>{text('leaveRoom')}</Text></Pressable>
+      <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => void leave()}><Text style={styles.secondaryText}>{text('leaveRoom')}</Text></Pressable>
     </View>
   );
 }

@@ -15,3 +15,9 @@ test('keeps dictionaries in parity and translates every typed key', () => {
     expect(translate('vi', key)).toBeTruthy();
   }
 });
+
+test('maps protocol card kinds to the correct Vietnamese game names', () => {
+  expect(translate('vi', 'cardRock')).toBe('Búa');
+  expect(translate('vi', 'cardPaper')).toBe('Bao');
+  expect(translate('vi', 'cardScissors')).toBe('Kéo');
+});
