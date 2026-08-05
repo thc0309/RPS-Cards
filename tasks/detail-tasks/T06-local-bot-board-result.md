@@ -1,6 +1,6 @@
 # T06 — Complete local bot rounds, board, and result
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -84,9 +84,14 @@ kiểm **Đấu lại** và **Về trang chủ**, rồi lặp với Reduced Moti
 
 ## Evidence to record
 
-- Four-round integration/fake-clock output.
-- Android/iOS video hoặc ordered screenshots Draft → Board → Result.
-- Timer/listener cleanup evidence; candidate Skia need nếu có, chưa cài.
+- Local match adapter tests pass manual/timeout locks, deadline race, exactly
+  four rounds, eight ordered discards, and rematch reset; board-zone test keeps
+  upper/lower geometry mirrored with per-player theme IDs.
+- `npm run verify` passes; Android development build rebuilt, installed, and
+  launched after the native module additions. iOS runtime is BLOCKED until a
+  simulator is booted.
+- Board uses `View`/native text and no Skia; no measured effect currently needs
+  the Skia decision gate. `dispose()` clears the active round timer/listeners.
 
 ## Explicitly skipped
 

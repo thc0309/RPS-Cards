@@ -1,6 +1,6 @@
 # Mobile and E2E Test Plan - RPS Cards MVP
 
-Status: planned; not executed
+Status: partially executed; native physical cases blocked
 
 Use this file with `vibe-e2e` or the approved native-device runner. Do not mark PASS without runtime evidence. Record every FAIL/BLOCKED case in `tasks/test-result.md`.
 

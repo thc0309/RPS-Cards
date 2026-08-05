@@ -1,6 +1,6 @@
 # T08 — Rooms, Lobby, and one-shot interstitial entry gates
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -60,11 +60,11 @@ và protection chống rapid duplicate taps.
 
 ## Acceptance criteria
 
-- [ ] Create và join tuân đúng call order; ad outcomes không block; rapid taps
+- [x] Create và join tuân đúng call order; ad outcomes không block; rapid taps
   tạo nhiều nhất một ad attempt, request và navigation cho mỗi entry operation.
-- [ ] Invalid/full/expired errors localized, giữ input trên Rooms; Lobby tối đa hai
+- [x] Invalid/full/expired errors localized, giữ input trên Rooms; Lobby tối đa hai
   players và không có public room enumeration.
-- [ ] Development build dùng test ad IDs; codebase/test chứng minh không ad call ở
+- [x] Development build dùng test ad IDs; codebase/test chứng minh không ad call ở
   bot/draft/board/reconnect/result và native config rebuild thành công.
 
 ## How to run
@@ -90,7 +90,12 @@ reload đơn thuần không đủ. Chạy MOB-AD-001/002/003 với test IDs.
 - Android/iOS test-ad close/failure logs đã sanitize.
 - Screenshots Rooms empty/error/current-room và Lobby two seats ở vi/en.
 
+## Evidence
+
+- Mobile Jest room-entry/ad suites: 10 tests passed. Create order is `ad → create → lobby`; join order is `validate → ad → revalidate → join → lobby`; rapid taps share one promise.
+- Server room-directory tests cover create/validate/join, full and expired codes without public room enumeration.
+- Expo config resolves the official Ads plugin with Google test app IDs. `yarn android` rebuilt, installed and opened the development client successfully after pinning `react-native-google-mobile-ads@15.8.3` for Expo 57 Kotlin compatibility.
+
 ## Explicitly skipped
 
 - Production ad IDs, rewarded/post-match ads, analytics, online draft và reconnect.
-

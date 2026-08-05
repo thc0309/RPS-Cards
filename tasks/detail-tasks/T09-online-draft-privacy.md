@@ -1,6 +1,6 @@
 # T09 — Authoritative online draft privacy and deadlines
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -56,11 +56,11 @@ suy ra card/position đã chọn.
 
 ## Acceptance criteria
 
-- [ ] Hai players draft sequentially với separate 5s authoritative deadlines;
+- [x] Hai players draft sequentially với separate 5s authoritative deadlines;
   manual/timeout race accept một legal choice và draft completes exactly once.
-- [ ] Captured seat-specific payloads không có forbidden position/card/order fields;
+- [x] Captured seat-specific payloads không có forbidden position/card/order fields;
   remaining two cards được reshuffle/re-index và third card never revealed.
-- [ ] Mobile active/inactive states và countdown đúng server projection ở vi/en;
+- [x] Mobile active/inactive states và countdown đúng server projection ở vi/en;
   route sang Board chỉ sau canonical draft complete.
 
 ## How to run
@@ -83,6 +83,12 @@ hình inactive device để chứng minh không có position animation/hint.
 - Sanitized message key traces per seat.
 - Fake clock and race test output.
 - Two-device video cho both drafter orders.
+
+## Evidence
+
+- `server/src/online-room.test.ts` covers separate draft turns, room-clock timeout path, inactive projection without selected position/card/order, fresh two-position re-index and idempotency.
+- `mobile/src/screens/OnlineDraftScreen.tsx` renders only server `deadlineAt`, active-seat state and safe projection; it routes to Board only after `ROUND_SELECTION`.
+- Full server suite and `npm run verify` passed.
 
 ## Explicitly skipped
 

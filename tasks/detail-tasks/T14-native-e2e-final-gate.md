@@ -1,6 +1,6 @@
 # T14 — Native-device E2E and final MVP evidence gate
 
-Status: pending
+Status: blocked (native device/E2E evidence)
 
 ## Outcome
 
@@ -72,10 +72,14 @@ test result; không tự thêm Maestro/Detox trong task này.
 
 ## Evidence to record
 
-- Exact diff/commit identifier (không tạo commit mới), device/build matrix.
-- Per-case PASS/FAIL/BLOCKED và screenshot/video/log path.
-- Final verify output và `$vibe-review` findings.
-- GO/NO-GO cho human review; deployment vẫn ngoài scope.
+- Exact source state is an uncommitted working tree; no commit was created.
+- `npm run verify` passes: game-core 13/13, server 17/17, mobile 12 suites / 25
+  tests, typecheck/lint/build all pass. `git diff --check` is in `tasks/test-result.md`.
+- Android Expo development build rebuilt, installed and opened on `Pixel_4a` (exit 0).
+  iOS planning reached CocoaPods/Xcode but is BLOCKED because no iOS 26.2 runtime
+  exists for the selected destination.
+- Per-case native PASS/BLOCKED records are in `tasks/test-result.md`; physical
+  two-device privacy/reconnect and 60fps profiling are not replaced by emulator smoke.
 
 ## Explicitly skipped
 

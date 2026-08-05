@@ -1,6 +1,6 @@
 # T11 — Reconnect reservation, expiry loss, and restart recovery
 
-Status: pending
+Status: complete (automated; physical two-device evidence pending T14)
 
 ## Outcome
 
@@ -81,9 +81,14 @@ không ghi raw token.
 
 ## Evidence to record
 
-- Fake-clock deadline before/after reconnect và one-loss count.
-- Two-device disconnect/reconnect video.
-- Sanitized SecureStore delete event and localized restart screen.
+- Server suite: 17/17 passed, including same-seat token reconnect, disconnected
+  action rejection, reservation expiry, one forfeit result and late reconnect rejection.
+- Mobile suite: 12 suites / 25 tests passed, including SecureStore-only credential read/write/delete.
+- `RECONNECT_TIMEOUT_MS` is range-validated at 20–30s with default 25s and is
+  injected into room construction; token is absent from route params, Zustand
+  persisted state, and structured logs.
+- Physical two-device video and server-restart device run remain T14 BLOCKED;
+  the native HTTP adapter has no Colyseus socket drop callback yet.
 
 ## Explicitly skipped
 

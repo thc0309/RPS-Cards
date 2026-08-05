@@ -1,6 +1,6 @@
 # Implementation Plan — RPS Cards MVP
 
-Status: T01–T02 complete; T03 next
+Status: T01–T12 complete; T13/T14 blocked on native evidence
 
 `SPEC.md` là hợp đồng sản phẩm. File này chỉ ánh xạ thứ tự, phụ thuộc và
 checkpoint. Chi tiết kỹ thuật, file dự kiến, tiêu chí nghiệm thu và lệnh chạy
@@ -59,7 +59,27 @@ development build installed/launched; iOS native prebuild/CocoaPods passed but
 simulator execution is blocked until a simulator is booted. T02 evidence:
 game-core TDD red/green completed; five core tests pass for all nine matchups,
 legal/illegal locks, simultaneous reveal, discard order, and exactly-four-round
-`MATCH_RESULT`; root `npm run verify` remains green.
+`MATCH_RESULT`; T03 evidence adds `864/864` exhaustive and `10000/10000`
+deterministic simulations. T04–T06 evidence: 8 mobile suites / 13 tests pass,
+typed vi/en preferences and SecureStore boundary are in place, local draft and
+15-second round adapters pass fake-clock race/rematch coverage, and Android
+development build rebuilt/installed/launched after native module additions. T07
+evidence: game-core protocol suite (13 tests), server Colyseus room/projection
+suite (9 tests), full `npm run verify`, and live `/health` smoke passed. T08–T10
+evidence: mobile room-entry/ad suites (10 tests), server online-room suite with
+privacy/four-round/rematch coverage, live create/validate/join smoke, full
+`npm run verify`, and Android development build rebuilt/installed/launched with
+the official test Ads plugin. iOS runtime remains blocked until a simulator is
+booted.
+T11 evidence: SecureStore reconnect credential, configurable 20–30s reservation
+(25s default), same-seat reconnect/expiry-forfeit tests, bounded retry route, and
+`ROOM_EXPIRED` cleanup are implemented; server 17/17 and mobile 25-test suites
+pass. T12 evidence: stable boundary validation, 20/s bounded limiter, 256-entry
+idempotency eviction, allowlist logger, secret-config checks and audit review pass.
+T13 code evidence: safe-area root, accessibility hints/state, reduced-motion
+behavior and `SKIA_NOT_NEEDED`; native screen-reader/font-scale/FPS evidence is
+blocked. T14 evidence is in `tasks/test-result.md`; Android emulator build/open
+PASS, iOS and two-device native cases BLOCKED.
 
 ### Phase B — P0 local playable slice
 
@@ -106,7 +126,8 @@ legal/illegal locks, simultaneous reveal, discard order, and exactly-four-round
 
 - Hai simulated clients vượt integration suite về capacity, idempotency,
   privacy, timeout và reconnect.
-- Hai thiết bị có thể create/join/draft/play/result; server vẫn authoritative.
+- Automated clients có thể create/join/draft/play/result/reconnect; server vẫn
+  authoritative. Hai thiết bị thật chưa có trong môi trường này.
 - Interactive mode: review P1 trước hardening. `$vibe-build all`: tiếp tục.
 
 ### Checkpoint D — after T12–T14
@@ -115,6 +136,8 @@ legal/illegal locks, simultaneous reveal, discard order, and exactly-four-round
 - Tất cả case trong `tasks/test-plan.md` là PASS hoặc có FAIL/BLOCKED evidence
   trong `tasks/test-result.md`.
 - Chạy `$vibe-review`; không tự commit hoặc triển khai production.
+- Current status: automated gate PASS; physical iOS/two-device/accessibility/
+  FPS cases BLOCKED and recorded, so Checkpoint D remains open.
 
 ## Tradeoffs and Deferred Decisions
 

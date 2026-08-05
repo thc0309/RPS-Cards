@@ -1,6 +1,6 @@
 # T04 — Mobile startup, guest identity, localization, and preferences
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -87,11 +87,14 @@ fallback. Không dump SecureStore value vào evidence.
 
 ## Evidence to record
 
-- Jest output cho hydrate/fallback/dictionary parity.
-- Android/iOS screenshots Home ở vi/en và Customize sheet.
-- Sanitized key list của AsyncStorage, không ghi value nhạy cảm.
+- Jest output: 8 mobile suites / 13 tests pass, including dictionary parity,
+  locale fallback, corrupt preference normalization, four-field persistence
+  selection, cosmetic fallback, and injected SecureStore guest identity.
+- Android development build rebuilt, installed, and launched with Expo SDK 57;
+  iOS runtime remains blocked by the unavailable simulator.
+- Persistence selector contains only `locale`, `uiThemeId`, `cardSkinId`, and
+  `boardThemeId`; active session and guest identity stay outside that payload.
 
 ## Explicitly skipped
 
 - Multi-theme shop, Supabase sync, login, online rooms và final battle screens.
-

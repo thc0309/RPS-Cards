@@ -1,6 +1,6 @@
 # T10 — Authoritative online rounds, result, and rematch
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -55,11 +55,11 @@ Result và rematch chỉ khi cả hai players consent.
 
 ## Acceptance criteria
 
-- [ ] Manual and timeout locks always select legal remaining cards; first lock
+- [x] Manual and timeout locks always select legal remaining cards; first lock
   stays secret; reveal/score/discards occur exactly once per round.
-- [ ] Two clients remain phase/round/score consistent through exactly four rounds
+- [x] Two clients remain phase/round/score consistent through exactly four rounds
   and receive one deterministic Match Result without client-computed authority.
-- [ ] Online rematch waits for both ready in same room; cancel/Home leaves safely;
+- [x] Online rematch waits for both ready in same room; cancel/Home leaves safely;
   duplicate/race cases do not double-advance or show ads.
 
 ## How to run
@@ -83,7 +83,12 @@ at timeout, then rematch-ready on one device before the other.
 - Two-device four-round video/log timeline with absolute deadlines.
 - Rematch consent/cancel evidence.
 
+## Evidence
+
+- `server/src/online-room.test.ts` covers first-lock privacy, simultaneous reveal, idempotent/conflicting retries, four-round result exactly once, and two-party rematch consent.
+- `mobile/src/screens/OnlineBoardScreen.tsx` and `OnlineResultScreen.tsx` render server projections and send only `LOCK_CARD`/`REMATCH_READY`; score and phase remain server-authoritative.
+- Full `npm run verify` passed; live server smoke covered `/health`, create, validate and join endpoints.
+
 ## Explicitly skipped
 
 - Disconnect reservation/restart recovery (T11), production deployment và history.
-

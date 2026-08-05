@@ -1,28 +1,78 @@
-import { createServer } from 'node:http';
+import { Server } from 'colyseus';
+import express from 'express';
+import type { Request, Response } from 'express';
 import { loadServerConfig } from './config.js';
+import { RpsRoom } from './rooms/RpsRoom.js';
+import { ProtocolError } from '@rps-cards/game-core';
+import { RoomDirectory } from './room-entry.js';
+
+export function createGameServer(directory?: RoomDirectory) {
+  const rooms = directory ?? new RoomDirectory({ reconnectTimeoutMs: loadServerConfig().reconnectTimeoutMs });
+  const server = new Server({
+    express: (app) => {
+      app.use(express.json({ limit: '16kb' }));
+      app.get('/health', (_request: Request, response: Response) => response.json({ ok: true }));
+      app.post('/rooms/create', (_request, response) => response.status(201).json(rooms.create()));
+      app.post('/rooms/validate', (request, response) => {
+        const roomCode = typeof request.body?.roomCode === 'string' ? request.body.roomCode : '';
+        response.json({ roomCode, status: rooms.validate(roomCode) });
+      });
+      app.post('/rooms/join', (request, response) => {
+        try {
+          const roomCode = typeof request.body?.roomCode === 'string' ? request.body.roomCode : '';
+          const sessionId = typeof request.body?.sessionId === 'string' ? request.body.sessionId : undefined;
+          response.json(rooms.join(roomCode, sessionId));
+        } catch (error) {
+          const code = error instanceof ProtocolError ? error.code : 'ROOM_NOT_FOUND';
+          response.status(code === 'ROOM_FULL' ? 409 : 404).json({ error: { code } });
+        }
+      });
+      app.post('/rooms/reconnect', (request, response) => {
+        try {
+          const roomCode = typeof request.body?.roomCode === 'string' ? request.body.roomCode : '';
+          const sessionId = typeof request.body?.sessionId === 'string' ? request.body.sessionId : '';
+          const reconnectToken = typeof request.body?.reconnectToken === 'string' ? request.body.reconnectToken : '';
+          response.json(rooms.reconnect(roomCode, sessionId, reconnectToken));
+        } catch (error) {
+          const code = error instanceof ProtocolError ? error.code : 'ROOM_EXPIRED';
+          response.status(404).json({ error: { code } });
+        }
+      });
+      app.get('/rooms/:roomCode/snapshot', (request, response) => {
+        try {
+          const room = rooms.get(request.params.roomCode);
+          if (!room || typeof request.query.sessionId !== 'string') throw new ProtocolError('ROOM_EXPIRED', 'room is not available');
+          response.json(room.projection(request.query.sessionId));
+        } catch (error) {
+          const code = error instanceof ProtocolError ? error.code : 'ROOM_EXPIRED';
+          response.status(404).json({ error: { code } });
+        }
+      });
+      app.post('/rooms/:roomCode/action', (request, response) => {
+        try {
+          const room = rooms.get(request.params.roomCode);
+          const sessionId = typeof request.body?.sessionId === 'string' ? request.body.sessionId : '';
+          if (!room) throw new ProtocolError('ROOM_EXPIRED', 'room is not available');
+          response.json(room.handle(sessionId, request.body?.action));
+        } catch (error) {
+          const code = error instanceof ProtocolError ? error.code : 'INVALID_MESSAGE';
+          response.status(code === 'INVALID_MESSAGE' ? 400 : 409).json({ error: { code } });
+        }
+      });
+    },
+  });
+  server.define('rps', RpsRoom);
+  return server;
+}
 
 const config = loadServerConfig();
-
-const server = createServer((request, response) => {
-  if (request.method === 'GET' && request.url === '/health') {
-    response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ ok: true }));
-    return;
-  }
-
-  response.writeHead(404, { 'content-type': 'application/json' });
-  response.end(JSON.stringify({ error: { code: 'NOT_FOUND' } }));
-});
-
-server.listen(config.port, config.host, () => {
-  console.log(
-    JSON.stringify({
-      event: 'server_started',
-      host: config.host,
-      port: config.port,
-      draftSelectionTimeoutMs: config.draftSelectionTimeoutMs,
-      roundSelectionTimeoutMs: config.roundSelectionTimeoutMs,
-      reconnectTimeoutMs: config.reconnectTimeoutMs,
-    }),
-  );
-});
+const server = createGameServer();
+await server.listen(config.port, config.host);
+console.log(JSON.stringify({
+  event: 'server_started',
+  host: config.host,
+  port: config.port,
+  draftSelectionTimeoutMs: config.draftSelectionTimeoutMs,
+  roundSelectionTimeoutMs: config.roundSelectionTimeoutMs,
+  reconnectTimeoutMs: config.reconnectTimeoutMs,
+}));

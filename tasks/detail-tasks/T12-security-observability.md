@@ -1,6 +1,6 @@
 # T12 — Security boundary and observability hardening
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -79,11 +79,18 @@ handoff. Không commit trong task này.
 
 ## Evidence to record
 
-- Boundary test matrix và count.
-- Sanitized audit summary với reachability decision.
-- `$vibe-review` findings hoặc explicit no-finding result.
+- Boundary matrix and count: core protocol malformed/unknown/oversized payloads,
+  room/session length checks, deterministic limiter, stable `RATE_LIMITED`, and
+  unchanged projection all pass; server is 17/17 and game-core 13/13.
+- Idempotency evicts oldest entries above 256 per room; duplicate/conflict tests pass.
+- Logger is allowlist-only; tests cover credential/card/raw payload/stack absence.
+  `.env.example` is placeholders and `.gitignore` excludes `.env*` except example.
+- `npm audit --audit-level=high`: no high/critical report; 18 low/moderate
+  transitive findings remain in Colyseus/Expo chains. `--force` was not run because
+  suggested fixes downgrade/break pinned Expo/Colyseus.
+- Review finding: HTTP polling remains an MVP transport simplification; native
+  Colyseus socket lifecycle is required before production reconnect guarantees.
 
 ## Explicitly skipped
 
 - Supabase/RLS, production CORS/deployment, auth account, analytics/APM và CI.
-

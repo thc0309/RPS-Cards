@@ -1,6 +1,6 @@
 # T05 — Complete the local bot draft slice
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -80,11 +80,14 @@ một ván không tap, và quan sát cả first/second drafter với fixed RNG t
 
 ## Evidence to record
 
-- Fake-clock race test output.
-- Video/screenshots vi/en cho active/inactive/timeout states.
-- Xác nhận không có secret index trong rendered debug view/logs.
+- Fake-clock adapter tests pass for player-first/player-second, 5-second
+  deadline timeout, and tap/timeout race; the mobile suite has 13 passing tests.
+- `DraftScreen` renders only facedown indexed positions and localized waiting
+  text for inactive turns; canonical completion is the only route trigger to
+  Board.
+- Android development build rebuilt/launched; visual video evidence is deferred
+  to T14 because iOS simulator execution is unavailable in this environment.
 
 ## Explicitly skipped
 
 - Board resolution/result (T06), online room, ads, reconnect và Skia.
-

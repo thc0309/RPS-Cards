@@ -118,5 +118,10 @@ Nếu app config dùng TypeScript, thay `--config mobile/app.json` bằng file t
 - `GET http://127.0.0.1:2567/health` returned `{ "ok": true }`.
 - `npm run mobile:android` completed Gradle `BUILD SUCCESSFUL`, installed
   `app-debug.apk` and opened on `Android_TV_1080p`.
+- `cd mobile && yarn android` now completes Gradle `BUILD SUCCESSFUL`, installs
+  the debug APK, starts Metro, and exits cleanly after the development client
+  is launched. Root cause was the mobile manifest pointing at the removed
+  `index.ts` entry instead of `expo-router/entry`; the mobile TypeScript config
+  also restores Jest/Node test types.
 - iOS prebuild and CocoaPods completed; `expo run:ios` is BLOCKED only because
   no iOS simulator was booted (`No iOS devices available in Simulator.app`).

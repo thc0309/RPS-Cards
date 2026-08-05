@@ -1,6 +1,6 @@
 # T13 — UI accessibility, localization fit, assets, and performance
 
-Status: pending
+Status: blocked (implementation complete; device profiling evidence unavailable)
 
 ## Outcome
 
@@ -97,12 +97,15 @@ Chỉ chạy install block sau khi decision evidence đã tồn tại.
 
 ## Evidence to record
 
-- Screenshot matrix vi/en + viewport/device metadata.
-- TalkBack/VoiceOver and Reduced Motion observations.
-- Asset size inventory and performance trace numbers.
-- Explicit `SKIA_NOT_NEEDED` hoặc bounded Skia before/after decision.
+- Added root SafeAreaProvider/SafeAreaView, localized accessibility hints/state,
+  44dp-or-larger targets, and reduced-motion behavior that removes card lift.
+- Mobile typecheck/lint and 12-suite / 25-test suite pass; board remains symmetric
+  upper/lower View zones.
+- `docs/assets` inventory is 34 PNGs (~33 MB); no bitmap is copied/mounted because
+  current UI uses native text/View surfaces. Decision: `SKIA_NOT_NEEDED`.
+- TalkBack/VoiceOver, font-scale matrix and 60fps traces are not claimed: iOS
+  target is unavailable and no native profiling runner is installed. Explicit T14 BLOCKED.
 
 ## Explicitly skipped
 
 - New gameplay, theme shop, Rive/custom engine, background music và speculative effects.
-

@@ -1,6 +1,6 @@
 # T07 — Colyseus protocol, room lifecycle, and private projections
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -60,11 +60,11 @@ riêng cho từng client mà không lộ secret hand/draft.
 
 ## Acceptance criteria
 
-- [ ] Env/room-code/ruleset validation đúng bounds; create/validate/join works,
+- [x] Env/room-code/ruleset validation đúng bounds; create/validate/join works,
   third client và duplicate/conflicting requests không corrupt room.
-- [ ] Two player-specific snapshots chứa đúng own secrets/public opponent fields;
+- [x] Two player-specific snapshots chứa đúng own secrets/public opponent fields;
   forbidden secret keys/card values hoàn toàn vắng mặt trước legal reveal.
-- [ ] Server dùng `game-core`, `maxClients=2`, stable error codes, bounded message
+- [x] Server dùng `game-core`, `maxClients=2`, stable error codes, bounded message
   rate/idempotency và sanitized logs; focused integration tests xanh.
 
 ## How to run
@@ -89,7 +89,20 @@ server/clients chắc chắn.
 - Projection key lists đã sanitize cho seat A/B.
 - Room-code collision and invalid-env test output.
 
+## Evidence
+
+- `npm run test --workspace game-core`: 13 tests passed, including malformed
+  protocol envelopes, stable `classic_v1`, and cosmetic fallback.
+- `npm run test --workspace server`: 9 tests passed, including Colyseus schema
+  metadata, two-seat/third-client capacity, stale/conflicting/idempotent
+  operations, explicit projection key allowlists, room-code collision retry,
+  and log redaction.
+- `npm run verify`: full game-core/server/mobile tests, typecheck, lint and
+  server build passed. Runtime smoke served `GET /health` with `200 {"ok":true}`.
+- Colyseus `0.17.10` and `@colyseus/schema` `4.0.30` are pinned in the server
+  manifest; public Schema carries only room metadata while private state is sent
+  through explicit seat projection messages.
+
 ## Explicitly skipped
 
 - Mobile Rooms UI, ads, actual draft scheduler, rounds và reconnect lifecycle.
-

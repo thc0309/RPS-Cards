@@ -1,6 +1,6 @@
 # T03 — Draft, injected randomness, and exhaustive verification
 
-Status: pending
+Status: complete
 
 ## Outcome
 
@@ -81,9 +81,13 @@ generator trước; không giảm 10,000 cases hoặc bỏ exhaustive gate.
 
 ## Evidence to record
 
-- Aggregate: `864/864` và `10000/10000` pass, elapsed time.
-- Snapshot/key listing chứng minh inactive projection không có secret fields.
-- Root verify output.
+- `game-core` Node suite reports `864/864` exhaustive cases and `10000/10000`
+  deterministic simulations passing; the focused simulation gate completed in
+  about 0.17 seconds.
+- Draft projection tests assert inactive views contain no `selectedPosition` or
+  `selectedCard`; remaining positions are re-indexed and timeout picks are
+  range-checked.
+- Root `npm run verify` passes after implementation.
 
 ## Explicitly skipped
 
