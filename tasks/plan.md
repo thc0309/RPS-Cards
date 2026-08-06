@@ -1,6 +1,6 @@
 # Implementation Plan — RPS Cards MVP
 
-Status: T01–T12 complete; T13/T14 blocked on native evidence
+Status: T01–T12 complete; T13/T14 open; T15–T22 planned for UI-reference fidelity
 
 `SPEC.md` là hợp đồng sản phẩm. File này chỉ ánh xạ thứ tự, phụ thuộc và
 checkpoint. Chi tiết kỹ thuật, file dự kiến, tiêu chí nghiệm thu và lệnh chạy
@@ -10,8 +10,8 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
 
 ### Stack và miền công việc đã phát hiện
 
-- Greenfield npm workspaces: `mobile`, `server`, `game-core`; hiện chưa có
-  package manifest hoặc product source.
+- npm workspaces đang hoạt động: `mobile`, `server`, `game-core`; automated
+  gameplay/security gates đã xanh, nhưng mobile UI hiện mới là functional shell.
 - Mobile: Expo development build, Expo Router, React Native, Zustand,
   AsyncStorage, SecureStore, i18n, Reanimated; Skia chỉ theo decision gate.
 - Backend: Node.js, Colyseus, authoritative in-memory rooms, typed protocol và
@@ -32,12 +32,16 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
 | `performance-optimization` | Đo animation/FPS, ảnh lớn và decision gate cho Skia |
 | `vibe-review` | Review theo checkpoint và trước E2E cuối |
 | `vibe-e2e` | Quy trình evidence; native execution dùng runner/device đã được chọn |
+| `vibe-plan` | Tách UI-reference remediation thành các slice có screenshot gate |
 
 ### Skill gaps
 
 - Chưa có repo-local skill chuyên tự động hóa React Native trên thiết bị
   (Maestro/Detox). Không chặn MVP vì `tasks/test-plan.md` hỗ trợ chạy tay có
   evidence; chỉ cài/tạo skill khi chọn runner chính thức.
+- Chưa có visual-diff runner cho native screenshot. T22 dùng `adb` + ảnh đối
+  chiếu có checklist trước; chỉ thêm Maestro/Detox hoặc image-diff dependency
+  khi manual evidence không còn đủ ổn định.
 - Chưa có skill chuyên Colyseus hoặc Google Mobile Ads. Dùng
   `source-driven-development` với tài liệu chính thức; không cài thêm skill chỉ
   để lập kế hoạch.
@@ -99,13 +103,35 @@ PASS, iOS and two-device native cases BLOCKED.
 | T10 | Authoritative online rounds, reveal, result và two-party rematch | T09 | [T10](detail-tasks/T10-online-rounds-result.md) | `api-and-interface-design`, `frontend-ui-engineering` |
 | T11 | Reconnect reservation, snapshot restore, expiry loss và `ROOM_EXPIRED` recovery | T10 | [T11](detail-tasks/T11-reconnect-expiry-restart.md) | `security-and-hardening`, `vibe-test` |
 
-### Phase D — MVP hardening and evidence
+### Phase D — MVP hardening
 
 | Task | Kết quả | Phụ thuộc | Chi tiết | Skills chính |
 |---|---|---|---|---|
 | T12 | Boundary hardening, rate limits, safe diagnostics và privacy regression suite | T11 | [T12](detail-tasks/T12-security-observability.md) | `security-and-hardening`, `vibe-review` |
 | T13 | Android/iOS portrait, accessibility, vi/en fit, reduced motion và measured Skia decision | T06, T11 | [T13](detail-tasks/T13-ui-accessibility-performance.md) | `frontend-ui-engineering`, `performance-optimization` |
-| T14 | Full verify và native-device E2E evidence cho P0/P1 | T12, T13 | [T14](detail-tasks/T14-native-e2e-final-gate.md) | `vibe-e2e`, `vibe-review` |
+
+### Phase E — UI-reference fidelity remediation
+
+`docs/ui/01-home.png`–`07-result.png` và `ui1.png` là visual source. Runtime
+state, safe area, vi/en và accessibility từ `SPEC.md` vẫn thắng các sample text,
+score hoặc fixed coordinates trong ảnh.
+
+| Task | Kết quả | Phụ thuộc | Chi tiết | Skills chính |
+|---|---|---|---|---|
+| T15 | Folk visual foundation và Home khớp `01-home.png` | T13 baseline | [T15](detail-tasks/T15-folk-foundation-home.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
+| T16 | Rooms khớp `02-rooms.png` với đủ empty/current/error/busy states | T15 | [T16](detail-tasks/T16-rooms-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T17 | Lobby khớp `03-lobby.png`, giữ privacy và live player state | T15, T16 | [T17](detail-tasks/T17-lobby-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T18 | Local/online Draft khớp `04-draft.png` và private selection states | T15 | [T18](detail-tasks/T18-draft-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T19 | Local/online Board khớp `05-board.png`/`ui1.png` | T18 | [T19](detail-tasks/T19-board-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
+| T20 | Reconnecting overlay khớp `06-reconnecting.png` trên board state | T19 | [T20](detail-tasks/T20-reconnecting-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T21 | Local/online Result khớp `07-result.png`, dùng lịch sử runtime | T19 | [T21](detail-tasks/T21-result-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T22 | Matrix screenshot, accessibility, vi/en, small-screen và asset/FPS evidence | T16–T21 | [T22](detail-tasks/T22-ui-visual-evidence.md) | `vibe-e2e`, `performance-optimization`, `vibe-review` |
+
+### Phase F — Final native evidence
+
+| Task | Kết quả | Phụ thuộc | Chi tiết | Skills chính |
+|---|---|---|---|---|
+| T14 | Full verify và native-device E2E evidence cho P0/P1 | T12, T13, T22 | [T14](detail-tasks/T14-native-e2e-final-gate.md) | `vibe-e2e`, `vibe-review` |
 
 ## Phase Checkpoints
 
@@ -130,14 +156,38 @@ PASS, iOS and two-device native cases BLOCKED.
   authoritative. Hai thiết bị thật chưa có trong môi trường này.
 - Interactive mode: review P1 trước hardening. `$vibe-build all`: tiếp tục.
 
-### Checkpoint D — after T12–T14
+### Checkpoint D — after T12–T13
+
+- Security/behavior regression suite xanh trước khi đổi visual layer.
+- Functional UI contract, accessibility baseline và Skia decision được giữ.
+
+### Checkpoint E1 — after T15–T17
+
+- Home → Rooms → Lobby khớp composition của ba reference tương ứng trên Android.
+- Create/join/current-room/error/busy/player-count flows không bị visual refactor làm hỏng.
+- Interactive mode: review navigation shell trước gameplay screens.
+
+### Checkpoint E2 — after T18–T19
+
+- Draft và Board local/online dùng đúng card art, private/public states, symmetric
+  board halves, reveal arena, discard zones và attached timer badge.
+- `npm run verify`, small-screen layout test và Android screenshot comparison xanh.
+- Interactive mode: review core gameplay fidelity trước overlay/result.
+
+### Checkpoint E3 — after T20–T22
+
+- Bảy screen reference có vi/en screenshots và explicit PASS/FAIL/BLOCKED record.
+- TalkBack, font scale, reduced motion, asset memory và Android FPS evidence được ghi;
+  iOS giữ BLOCKED nếu runtime vẫn không có.
+
+### Checkpoint F — after T14
 
 - `npm run verify` xanh trên đúng source state được test.
 - Tất cả case trong `tasks/test-plan.md` là PASS hoặc có FAIL/BLOCKED evidence
   trong `tasks/test-result.md`.
 - Chạy `$vibe-review`; không tự commit hoặc triển khai production.
 - Current status: automated gate PASS; physical iOS/two-device/accessibility/
-  FPS cases BLOCKED and recorded, so Checkpoint D remains open.
+  FPS cases BLOCKED and recorded; UI fidelity tasks T15–T22 phải hoàn tất trước T14.
 
 ## Tradeoffs and Deferred Decisions
 
@@ -145,6 +195,11 @@ PASS, iOS and two-device native cases BLOCKED.
   room hết hạn theo contract.
 - `View`/`ImageBackground`/Reanimated là mặc định. Chỉ thêm Skia sau số đo trong
   T13 chứng minh một acceptance case cụ thể không đạt.
+- Dùng các layer trong `docs/assets` làm nguồn; chỉ copy/resize asset thực sự được
+  mount vào `mobile/src/assets/folk_default`. Không dùng nguyên mockup full-screen
+  vì text/runtime state phải native và hai board halves thuộc từng player.
+- Không thêm component library hoặc generic theme engine. Chỉ extract một visual
+  primitive khi đã có ít nhất hai màn hình dùng cùng geometry.
 - Native E2E runner chưa được chọn. T14 dùng manual device protocol trước; việc
   thêm Maestro/Detox là quyết định riêng vì làm tăng native/CI scope.
 - EAS distribution, production ads, monitoring, privacy paperwork và release

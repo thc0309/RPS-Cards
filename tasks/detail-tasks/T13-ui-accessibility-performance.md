@@ -1,6 +1,6 @@
 # T13 — UI accessibility, localization fit, assets, and performance
 
-Status: blocked (implementation complete; device profiling evidence unavailable)
+Status: open (accessibility baseline complete; reference fidelity delegated to T15–T22)
 
 ## Outcome
 

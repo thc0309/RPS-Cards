@@ -1,6 +1,6 @@
 # Todo — RPS Cards MVP
 
-Status: T01–T12 complete; T13/T14 blocked on native evidence
+Status: T01–T12 complete; T13/T14 open; T15–T22 planned for UI-reference fidelity
 
 Chi tiết của mỗi task nằm trong `tasks/detail-tasks/`. Chỉ đánh dấu hoàn tất sau
 khi acceptance criteria và verification trong file tương ứng đã có evidence.
@@ -31,6 +31,24 @@ khi acceptance criteria và verification trong file tương ứng đã có evide
 ## Phase D — MVP hardening and evidence
 
 - [x] [T12 — Security and observability](detail-tasks/T12-security-observability.md) — boundary/rate/log/audit checks pass; moderate transitive audit findings documented
-- [ ] [T13 — UI accessibility and performance](detail-tasks/T13-ui-accessibility-performance.md) — implementation pass; screen-reader/font-scale/60fps device evidence blocked
-- [ ] [T14 — Native E2E final gate](detail-tasks/T14-native-e2e-final-gate.md) — exact-source Android build/install/startup PASS on Pixel 4a; full Android, iOS and two-device cases remain blocked/pending
+- [ ] [T13 — UI accessibility and performance](detail-tasks/T13-ui-accessibility-performance.md) — accessibility baseline pass; reference fidelity moved to T15–T22; screen-reader/font-scale/60fps pending
 - [ ] Checkpoint D recorded in `tasks/plan.md`
+
+## Phase E — UI-reference fidelity remediation
+
+- [ ] [T15 — Folk foundation and Home](detail-tasks/T15-folk-foundation-home.md)
+- [ ] [T16 — Rooms visual fidelity](detail-tasks/T16-rooms-visual-fidelity.md)
+- [ ] [T17 — Lobby visual fidelity](detail-tasks/T17-lobby-visual-fidelity.md)
+- [ ] Checkpoint E1 recorded in `tasks/plan.md`
+- [ ] [T18 — Draft visual fidelity](detail-tasks/T18-draft-visual-fidelity.md)
+- [ ] [T19 — Board visual fidelity](detail-tasks/T19-board-visual-fidelity.md)
+- [ ] Checkpoint E2 recorded in `tasks/plan.md`
+- [ ] [T20 — Reconnecting visual fidelity](detail-tasks/T20-reconnecting-visual-fidelity.md)
+- [ ] [T21 — Result visual fidelity](detail-tasks/T21-result-visual-fidelity.md)
+- [ ] [T22 — UI visual evidence matrix](detail-tasks/T22-ui-visual-evidence.md)
+- [ ] Checkpoint E3 recorded in `tasks/plan.md`
+
+## Phase F — Final native evidence
+
+- [ ] [T14 — Native E2E final gate](detail-tasks/T14-native-e2e-final-gate.md) — chạy sau T22; Android startup đã PASS, full Android/iOS/two-device vẫn pending
+- [ ] Checkpoint F recorded in `tasks/plan.md`

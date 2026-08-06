@@ -40,6 +40,22 @@ Use this file with `vibe-e2e` or the approved native-device runner. Do not mark 
 | MOB-UI-006 | Rooms with no credential, then one saved reconnect credential; force network/ad errors | Inspect empty/current-room states; tap create/join rapidly; open the saved room; retry after each failure. | Exactly one localized current-room row replaces the empty state; busy controls cannot duplicate requests; every failure returns to an editable, non-stuck Rooms state. | Pending; room-entry regression tests automate error/busy behavior |
 | MOB-UI-007 | 320x568 and 390x844 portrait; local and online Board in vi/en | Select each card, inspect **Khóa bài**, let the opponent lock, and complete four rounds. | Búa maps to `ROCK`, Bao to `PAPER`, and Kéo to `SCISSORS`; selection precedes lock; locked status is textual; used cards disappear; per-player discards and `VS` reveal remain readable without wrapping the four-card hand. | Pending; i18n/projection/countdown regressions automate state contracts |
 
+## Visual fidelity against `docs/ui`
+
+For each case, capture Vietnamese and English screenshots. Compare composition,
+major geometry, art layers, native text, state treatment, safe area and touch areas.
+Sample names/scores/cards in the reference are illustrative; runtime state wins.
+
+| Case ID | Reference / Preconditions | Steps | Expected result | Evidence |
+|---------|---------------------------|-------|-----------------|----------|
+| MOB-VIS-001 | `01-home.png`; fresh and hydrated Home; vi/en | Launch, inspect loading-to-Home transition, both primary actions and Customize. | Paper/village scene, brand hierarchy and red/blue actions follow the reference; native labels fit; both routes and Customize remain usable. | Pending — T15 |
+| MOB-VIS-002 | `02-rooms.png`; no credential, saved credential, each entry error and busy state | Open Rooms, exercise empty/current room, create, invalid/full/expired join, retry and back. | Title plaque, framed room panel, red create, labeled input and blue join follow the reference; every functional state is localized, recoverable and stable. | Pending — T16 |
+| MOB-VIS-003 | `03-lobby.png`; one then two seats | Create a room, copy code, observe waiting state, join from device B, then leave. | Invitation scroll, two player panels, VS, ready/waiting and leave hierarchy follow the reference; code/status are runtime native text and no private data appears. | Pending — T17 |
+| MOB-VIS-004 | `04-draft.png`; local and online active/inactive seats | Observe available, selected, waiting and timeout states with Reduced Motion on/off. | Woven scene, opponent plaque, three identical backs and instruction panel follow the reference; selection is visible and online opponent pick remains secret. | Pending — T18 |
+| MOB-VIS-005 | `05-board.png` + `ui1.png`; local and online rounds 1–4 | Capture selection, locked, reveal and post-discard states; inspect both player themes. | Mirrored board halves, score plaques, facedown backs, neutral two-slot VS arena, illustrated fanned hand, discard zones and attached timer/Lock action follow the references without clipping. | Pending — T19 |
+| MOB-VIS-006 | `06-reconnecting.png`; active online board then transport loss | Disconnect within and beyond the reservation window; inspect Reduced Motion. | Dimmed non-interactive board and centered reconnect scroll/drum follow the reference; native countdown reflects the reservation and expiry behavior remains authoritative. | Pending — T20 |
+| MOB-VIS-007 | `07-result.png`; completed local/online match and early forfeit | Inspect win/loss, four runtime round rows, rematch/wait/home and forfeit. | Outcome stamp, score plaque, history scroll and actions follow the reference; rows use real history, while forfeit never fabricates missing rounds. | Pending — T21 |
+
 ## P1 - Private rooms and privacy
 
 | Case ID | Device / Preconditions | Steps | Expected result | Evidence |

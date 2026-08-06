@@ -10,7 +10,7 @@ Task này không deploy, không dùng production ads và không tự commit.
 
 ## Dependencies and skills
 
-- Dependencies: T12, T13.
+- Dependencies: T12, T13, T22.
 - Required skills: `vibe-e2e`, `vibe-review`, `security-and-hardening` cho evidence
   redaction.
 - Read first: toàn bộ `tasks/test-plan.md`, `tasks/test-result.md`, checkpoint D
