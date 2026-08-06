@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { createOnlineRoomClient } from '../game/colyseus-client';
 import { translate } from '../i18n';
 import { deleteReconnectCredential, readReconnectCredential } from '../security/reconnect-credential';
 import { useAppStore } from '../store/app-store';
+import { FolkPanel } from '../components/FolkPanel';
+import { FolkSurface } from '../components/FolkSurface';
+import { folkAssets } from '../ui/folk-assets';
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -46,7 +49,7 @@ export function ReconnectingScreen() {
     void run();
     return () => { active = false; };
   }, [params.roomCode, params.sessionId, router, setActiveRoom]);
-  return <View style={styles.container}><Text accessibilityRole="header" style={styles.title}>{text('reconnecting')}</Text><Text style={styles.body}>{text('reconnectingBody')}</Text></View>;
+  return <FolkSurface background="village" contentStyle={styles.container}><Image source={folkAssets.decorations.drum} style={styles.drum} /><FolkPanel style={styles.panel}><Text accessibilityRole="header" style={styles.title}>{text('reconnecting')}</Text><Text style={styles.body}>{text('reconnectingBody')}</Text></FolkPanel></FolkSurface>;
 }
 
-const styles = StyleSheet.create({ container: { alignItems: 'center', backgroundColor: '#F5E7C5', flex: 1, justifyContent: 'center', padding: 24 }, title: { color: '#43291F', fontSize: 28, fontWeight: '900', textAlign: 'center' }, body: { color: '#755846', marginTop: 14, textAlign: 'center' } });
+const styles = StyleSheet.create({ container: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 24 }, panel: { maxWidth: 480, width: '100%' }, drum: { height: 150, marginBottom: -32, width: 150, zIndex: 1 }, title: { color: '#8A241A', fontSize: 28, fontWeight: '900', textAlign: 'center' }, body: { color: '#5A3521', marginTop: 14, textAlign: 'center' } });

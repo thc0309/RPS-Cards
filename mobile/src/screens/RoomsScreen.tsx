@@ -8,6 +8,11 @@ import { createRoomEntryFlow, type RoomEntryError } from '../game/room-entry';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
 import { readReconnectCredential, saveReconnectCredential, type ReconnectCredential } from '../security/reconnect-credential';
+import { FolkButton } from '../components/FolkButton';
+import { FolkPanel } from '../components/FolkPanel';
+import { FolkSurface } from '../components/FolkSurface';
+import { folkAssets } from '../ui/folk-assets';
+import { Image } from 'react-native';
 
 export function RoomsScreen() {
   const router = useRouter();
@@ -36,42 +41,35 @@ export function RoomsScreen() {
   };
   const errorText = error === 'INVALID_CODE' ? text('invalidRoomCode') : error === 'ROOM_FULL' ? text('roomFull') : error === 'ROOM_EXPIRED' || error === 'ROOM_NOT_FOUND' ? text('roomExpired') : error ? text('entryFailed') : null;
   return (
-    <View style={styles.container}>
-      <Text accessibilityRole="header" style={styles.title}>{text('roomsTitle')}</Text>
-      {currentRoom ? <Pressable accessibilityRole="button" accessibilityLabel={`${text('currentRoom')}: ${currentRoom.roomCode}`} style={styles.currentRoom} onPress={() => router.replace({ pathname: '/reconnecting', params: { roomCode: currentRoom.roomCode, sessionId: currentRoom.sessionId } })}><Text style={styles.currentRoomLabel}>{text('currentRoom')}</Text><Text style={styles.currentRoomCode}>{currentRoom.roomCode}</Text></Pressable> : <Text style={styles.empty}>{text('noCurrentRoom')}</Text>}
-      <Pressable accessibilityRole="button" disabled={busy} style={styles.primary} onPress={() => { setError(null); void run(flow.createRoom()); }}>
-        <Text style={styles.primaryText}>{text('createRoom')}</Text>
-      </Pressable>
-      <TextInput
-        accessibilityLabel={text('roomCodePlaceholder')}
-        autoCapitalize="characters"
-        maxLength={5}
-        placeholder={text('roomCodePlaceholder')}
-        style={styles.input}
-        value={code}
-        onChangeText={(value) => { setCode(value.toUpperCase()); setError(null); }}
-      />
-      <Pressable accessibilityRole="button" disabled={busy} style={styles.secondary} onPress={() => { setError(null); void run(flow.joinRoom(code)); }}>
-        <Text style={styles.secondaryText}>{text('joinRoom')}</Text>
-      </Pressable>
-      {errorText && <Text accessibilityRole="alert" style={styles.error}>{errorText}</Text>}
-      <Pressable accessibilityRole="button" style={styles.back} onPress={() => router.replace('/')}><Text>{text('home')}</Text></Pressable>
-    </View>
+    <FolkSurface background="paper" contentStyle={styles.surface}>
+      <View style={styles.container}>
+        <Pressable accessibilityRole="button" accessibilityLabel={text('home')} style={styles.back} onPress={() => router.replace('/')}><Text style={styles.backText}>‹</Text></Pressable>
+        <Image source={folkAssets.controls.bluePlaque} resizeMode="stretch" style={styles.plaque} accessibilityLabel={text('roomsTitle')} />
+        <Text accessibilityRole="header" style={styles.title}>{text('roomsTitle')}</Text>
+        <FolkPanel style={styles.panel}>
+          {currentRoom ? <Pressable accessibilityRole="button" accessibilityLabel={`${text('currentRoom')}: ${currentRoom.roomCode}`} style={styles.currentRoom} onPress={() => router.replace({ pathname: '/reconnecting', params: { roomCode: currentRoom.roomCode, sessionId: currentRoom.sessionId } })}><Text style={styles.currentRoomLabel}>{text('currentRoom')}</Text><Text style={styles.currentRoomCode}>{currentRoom.roomCode}</Text></Pressable> : <Text style={styles.empty}>{text('noCurrentRoom')}</Text>}
+          <FolkButton accessibilityLabel={text('createRoom')} disabled={busy} onPress={() => { setError(null); void run(flow.createRoom()); }}>{text('createRoom')}</FolkButton>
+          <TextInput accessibilityLabel={text('roomCodePlaceholder')} autoCapitalize="characters" maxLength={5} placeholder={text('roomCodePlaceholder')} placeholderTextColor="#805B3C" style={styles.input} value={code} onChangeText={(value) => { setCode(value.toUpperCase()); setError(null); }} />
+          <FolkButton variant="blue" accessibilityLabel={text('joinRoom')} disabled={busy} onPress={() => { setError(null); void run(flow.joinRoom(code)); }}>{text('joinRoom')}</FolkButton>
+          {errorText && <Text accessibilityRole="alert" style={styles.error}>{errorText}</Text>}
+        </FolkPanel>
+      </View>
+    </FolkSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', backgroundColor: '#F5E7C5', flex: 1, justifyContent: 'center', padding: 24 },
-  title: { color: '#43291F', fontSize: 30, fontWeight: '900' },
-  empty: { color: '#755846', marginTop: 12 },
-  currentRoom: { alignItems: 'center', borderColor: '#D8B77C', borderRadius: 12, borderWidth: 2, marginTop: 16, minHeight: 64, padding: 10, width: '100%' },
+  surface: { padding: 20 },
+  container: { alignItems: 'center', flex: 1, justifyContent: 'center', maxWidth: 520, width: '100%' },
+  title: { color: '#FFF3CC', fontSize: 28, fontWeight: '900', marginTop: -10, textShadowColor: '#3A1D13', textShadowOffset: { width: 1, height: 2 }, textShadowRadius: 2 },
+  plaque: { height: 112, marginBottom: -70, maxWidth: 480, width: '100%' },
+  panel: { marginTop: 28, width: '100%' },
+  empty: { color: '#5A3521', marginTop: 12, textAlign: 'center' },
+  currentRoom: { alignItems: 'center', borderColor: '#A63D2F', borderRadius: 12, borderWidth: 2, marginBottom: 10, minHeight: 64, padding: 10, width: '100%' },
   currentRoomLabel: { color: '#755846', fontSize: 13 },
   currentRoomCode: { color: '#A63D2F', fontSize: 20, fontWeight: '900', letterSpacing: 4, marginTop: 2 },
-  primary: { alignItems: 'center', backgroundColor: '#A63D2F', borderRadius: 14, justifyContent: 'center', marginTop: 28, minHeight: 54, width: '100%' },
-  primaryText: { color: '#FFF9EC', fontWeight: '800' },
-  input: { backgroundColor: '#FFF9EC', borderColor: '#D8B77C', borderRadius: 12, borderWidth: 2, color: '#43291F', fontSize: 20, letterSpacing: 4, marginTop: 20, minHeight: 54, paddingHorizontal: 16, textAlign: 'center', width: '100%' },
-  secondary: { alignItems: 'center', borderColor: '#A63D2F', borderRadius: 14, borderWidth: 2, justifyContent: 'center', marginTop: 12, minHeight: 54, width: '100%' },
-  secondaryText: { color: '#A63D2F', fontWeight: '800' },
+  input: { backgroundColor: '#FFF9EC', borderColor: '#9C6737', borderRadius: 10, borderWidth: 2, color: '#43291F', fontSize: 20, letterSpacing: 4, marginTop: 14, minHeight: 58, paddingHorizontal: 16, textAlign: 'center', width: '100%' },
   error: { color: '#A63D2F', fontWeight: '700', marginTop: 16, textAlign: 'center' },
-  back: { marginTop: 24, minHeight: 44, padding: 12 },
+  back: { alignSelf: 'flex-start', minHeight: 44, padding: 4 },
+  backText: { color: '#FFF3CC', fontSize: 38, fontWeight: '800', textShadowColor: '#3A1D13', textShadowOffset: { width: 1, height: 2 }, textShadowRadius: 2 },
 });

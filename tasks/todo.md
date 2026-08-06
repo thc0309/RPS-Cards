@@ -1,6 +1,6 @@
 # Todo — RPS Cards MVP
 
-Status: T01–T12 complete; T13/T14 open; T15–T22 planned for UI-reference fidelity
+Status: T01–T12 complete; T13/T14 open; UI remediation plan ready; implementation pending
 
 Chi tiết của mỗi task nằm trong `tasks/detail-tasks/`. Chỉ đánh dấu hoàn tất sau
 khi acceptance criteria và verification trong file tương ứng đã có evidence.
@@ -36,6 +36,7 @@ khi acceptance criteria và verification trong file tương ứng đã có evide
 
 ## Phase E — UI-reference fidelity remediation
 
+- [ ] [T13-R — Lifecycle and shared layout root fix] — remove React warning, clean effects, safe-area surface, 44dp targets, and responsive text regression before visual slices
 - [ ] [T15 — Folk foundation and Home](detail-tasks/T15-folk-foundation-home.md)
 - [ ] [T16 — Rooms visual fidelity](detail-tasks/T16-rooms-visual-fidelity.md)
 - [ ] [T17 — Lobby visual fidelity](detail-tasks/T17-lobby-visual-fidelity.md)

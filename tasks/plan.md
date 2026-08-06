@@ -1,6 +1,6 @@
 # Implementation Plan — RPS Cards MVP
 
-Status: T01–T12 complete; T13/T14 open; T15–T22 planned for UI-reference fidelity
+Status: T01–T12 complete; T13/T14 open; remediation plan awaiting implementation
 
 `SPEC.md` là hợp đồng sản phẩm. File này chỉ ánh xạ thứ tự, phụ thuộc và
 checkpoint. Chi tiết kỹ thuật, file dự kiến, tiêu chí nghiệm thu và lệnh chạy
@@ -32,6 +32,7 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
 | `performance-optimization` | Đo animation/FPS, ảnh lớn và decision gate cho Skia |
 | `vibe-review` | Review theo checkpoint và trước E2E cuối |
 | `vibe-e2e` | Quy trình evidence; native execution dùng runner/device đã được chọn |
+| `browser-testing-with-devtools` | Console/warning/screenshot inspection for a web fallback; native device evidence remains the source of truth |
 | `vibe-plan` | Tách UI-reference remediation thành các slice có screenshot gate |
 
 ### Skill gaps
@@ -39,6 +40,9 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
 - Chưa có repo-local skill chuyên tự động hóa React Native trên thiết bị
   (Maestro/Detox). Không chặn MVP vì `tasks/test-plan.md` hỗ trợ chạy tay có
   evidence; chỉ cài/tạo skill khi chọn runner chính thức.
+- `responsiveness-check` is available in the shared catalog but is not
+  repo-local; consider it only if the manual native viewport matrix becomes too
+  slow, not as a planning prerequisite.
 - Chưa có visual-diff runner cho native screenshot. T22 dùng `adb` + ảnh đối
   chiếu có checklist trước; chỉ thêm Maestro/Detox hoặc image-diff dependency
   khi manual evidence không còn đủ ổn định.
@@ -47,6 +51,15 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
   để lập kế hoạch.
 - Supabase không có task MVP: chỉ kích hoạt khi có account, cross-device sync,
   inventory/purchase, history hoặc durable recovery theo `SPEC.md`.
+
+### Additional intake for this remediation
+
+- `debugging-and-error-recovery` is required first for the reproduced React
+  state-update warning and lifecycle cleanup; fix the root cause before visual
+  work proceeds.
+- `incremental-implementation` governs each screen slice: implement, focused
+  test, typecheck/lint, then native screenshot before the next slice.
+- `code-review-and-quality` is the final cross-axis review after evidence.
 
 ## Task Plan
 
@@ -118,7 +131,8 @@ score hoặc fixed coordinates trong ảnh.
 
 | Task | Kết quả | Phụ thuộc | Chi tiết | Skills chính |
 |---|---|---|---|---|
-| T15 | Folk visual foundation và Home khớp `01-home.png` | T13 baseline | [T15](detail-tasks/T15-folk-foundation-home.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
+| T13-R | Lifecycle/runtime and shared layout gate: remove React warning, clean subscriptions, safe-area surface, 44dp shared hit targets, and responsive text constraints | T13, T12 | Root-cause fix plus focused mobile regression tests | `debugging-and-error-recovery`, `vibe-test`, `frontend-ui-engineering` |
+| T15 | Folk visual foundation và Home khớp `01-home.png` | T13-R | [T15](detail-tasks/T15-folk-foundation-home.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
 | T16 | Rooms khớp `02-rooms.png` với đủ empty/current/error/busy states | T15 | [T16](detail-tasks/T16-rooms-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
 | T17 | Lobby khớp `03-lobby.png`, giữ privacy và live player state | T15, T16 | [T17](detail-tasks/T17-lobby-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
 | T18 | Local/online Draft khớp `04-draft.png` và private selection states | T15 | [T18](detail-tasks/T18-draft-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
@@ -161,6 +175,17 @@ score hoặc fixed coordinates trong ảnh.
 - Security/behavior regression suite xanh trước khi đổi visual layer.
 - Functional UI contract, accessibility baseline và Skia decision được giữ.
 
+### Checkpoint E0 — after T13-R
+
+- Cold launch and every route no longer emit the reproduced React state-update
+  warning or subscription cleanup warning.
+- `FolkSurface` respects safe areas; shared controls meet 44 dp; vi/en text
+  remains usable at the 320×568/font-scale 1.3 regression matrix.
+- `npm run verify`, mobile typecheck/lint, and focused lifecycle/layout tests are
+  green before any reference-composition work.
+- Interactive mode: review the root-cause fix before T15. `$vibe-build all`:
+  continue only when this gate is green.
+
 ### Checkpoint E1 — after T15–T17
 
 - Home → Rooms → Lobby khớp composition của ba reference tương ứng trên Android.
@@ -188,6 +213,37 @@ score hoặc fixed coordinates trong ảnh.
 - Chạy `$vibe-review`; không tự commit hoặc triển khai production.
 - Current status: automated gate PASS; physical iOS/two-device/accessibility/
   FPS cases BLOCKED and recorded; UI fidelity tasks T15–T22 phải hoàn tất trước T14.
+
+## Task-level implementation contracts
+
+Each remediation task is one vertical slice. It may touch its listed screen,
+shared presentation primitive, one focused test, and required asset/i18n entries;
+it must not alter game-core rules or room protocols. Every task closes with its
+automated checks, its matching `MOB-VIS` case, and a sanitized test-result entry.
+
+### T13-R — root lifecycle/shared layout
+
+- Acceptance: no render-time state/store writes; all subscriptions and timers
+  clean up; async busy/error paths recover; safe-area and 44 dp contracts hold.
+- Verify: failing regression test first, then `npm run verify`, Expo Doctor, and
+  cold Android launch through all seven routes with warning logs captured.
+- Likely files: `BoardScreen.tsx`, `DraftScreen.tsx`, `RoomsScreen.tsx`,
+  `Online*Screen.tsx`, `FolkSurface.tsx`, and focused mobile tests.
+
+### T15–T21 — screen slices
+
+- Acceptance and file ownership remain in each linked detail task. Keep local
+  and online adapters separate from shared presentation; runtime data wins over
+  sample mockup text.
+- Verify each slice with its linked `MOB-VIS` case, vi/en screenshots, focused
+  Jest tests, typecheck/lint, and no new runtime warnings.
+
+### T22/T14 — evidence gates
+
+- T22 is evidence-only after T15–T21: update test plan/results, screenshots,
+  font-scale/safe-area/reduced-motion/accessibility/FPS records, and asset budget.
+- T14 is final; two-client Reconnecting and unavailable iOS remain BLOCKED unless
+  the required devices/runtime are actually available.
 
 ## Tradeoffs and Deferred Decisions
 

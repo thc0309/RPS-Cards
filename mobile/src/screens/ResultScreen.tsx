@@ -1,8 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getLocalMatchAdapter, disposeLocalSession } from '../game/local-session';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
+import { FolkButton } from '../components/FolkButton';
+import { FolkPanel } from '../components/FolkPanel';
+import { FolkSurface } from '../components/FolkSurface';
 
 export function ResultScreen() {
   const router = useRouter();
@@ -13,27 +16,14 @@ export function ResultScreen() {
   if (!adapter || !result) return null;
   const winner = result.winner === 'PLAYER_A' ? text('youWin') : text('botWins');
   return (
-    <View style={styles.container}>
-      <Text accessibilityRole="header" style={styles.title}>{text('result')}</Text>
-      <Text style={styles.winner}>{winner}</Text>
-      <Text style={styles.score}>{text('score')}: {result.scores.PLAYER_A} – {result.scores.PLAYER_B}</Text>
-      <Pressable accessibilityRole="button" style={styles.primary} onPress={() => { adapter.rematch(); router.replace('/board'); }}>
-        <Text style={styles.primaryText}>{text('rematch')}</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => { disposeLocalSession(); router.replace('/'); }}>
-        <Text style={styles.secondaryText}>{text('home')}</Text>
-      </Pressable>
-    </View>
+    <FolkSurface background="village" contentStyle={styles.container}><FolkPanel style={styles.panel}><Text accessibilityRole="header" style={styles.title}>{text('result')}</Text><Text style={styles.winner}>{winner}</Text><Text style={styles.score}>{text('score')}: {result.scores.PLAYER_A} – {result.scores.PLAYER_B}</Text><FolkButton accessibilityLabel={text('rematch')} onPress={() => { adapter.rematch(); router.replace('/board'); }}>{text('rematch')}</FolkButton><FolkButton variant="blue" accessibilityLabel={text('home')} onPress={() => { disposeLocalSession(); router.replace('/'); }}>{text('home')}</FolkButton></FolkPanel></FolkSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', backgroundColor: '#F5E7C5', flex: 1, justifyContent: 'center', padding: 24 },
-  title: { color: '#43291F', fontSize: 30, fontWeight: '900' },
+  container: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 24 },
+  panel: { maxWidth: 480, width: '100%' },
+  title: { color: '#8A241A', fontSize: 30, fontWeight: '900', textAlign: 'center' },
   winner: { color: '#A63D2F', fontSize: 24, fontWeight: '800', marginTop: 18 },
   score: { color: '#755846', fontSize: 18, marginTop: 10 },
-  primary: { alignItems: 'center', backgroundColor: '#A63D2F', borderRadius: 14, justifyContent: 'center', marginTop: 36, minHeight: 52, minWidth: 220 },
-  primaryText: { color: '#FFF9EC', fontWeight: '800' },
-  secondary: { alignItems: 'center', borderColor: '#A63D2F', borderRadius: 14, borderWidth: 2, justifyContent: 'center', marginTop: 12, minHeight: 52, minWidth: 220 },
-  secondaryText: { color: '#A63D2F', fontWeight: '800' },
 });

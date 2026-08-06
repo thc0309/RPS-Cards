@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import { createOnlineRoomClient } from '../game/colyseus-client';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
 import type { RoomProjection } from '@rps-cards/game-core';
 import { deleteReconnectCredential } from '../security/reconnect-credential';
+import { FolkButton } from '../components/FolkButton';
+import { FolkPanel } from '../components/FolkPanel';
+import { FolkSurface } from '../components/FolkSurface';
+import { folkAssets } from '../ui/folk-assets';
 
 export function LobbyScreen() {
   const router = useRouter();
@@ -40,24 +45,34 @@ export function LobbyScreen() {
     router.replace('/rooms');
   };
   return (
-    <View style={styles.container}>
-      <Text accessibilityRole="header" style={styles.title}>{text('lobbyTitle')}</Text>
-      <Text style={styles.label}>{text('roomCode')}</Text>
-      <Text selectable style={styles.code}>{params.roomCode}</Text>
-      <Text accessibilityLiveRegion="polite" style={styles.status}>{text('playersReady')}: {snapshot?.players.length ?? 1} / 2</Text>
-      <Text style={styles.waiting}>{text('waitingOpponent')}</Text>
-      <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => void leave()}><Text style={styles.secondaryText}>{text('leaveRoom')}</Text></Pressable>
-    </View>
+    <FolkSurface background="village" contentStyle={styles.surface}>
+      <View style={styles.container}>
+        <Image source={folkAssets.controls.redPlaque} resizeMode="stretch" style={styles.plaque} accessibilityLabel={text('lobbyTitle')} />
+        <Text accessibilityRole="header" style={styles.title}>{text('lobbyTitle')}</Text>
+        <FolkPanel style={styles.panel}>
+          <Text style={styles.label}>{text('roomCode')}</Text>
+          <Text selectable style={styles.code}>{params.roomCode}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={text('copyCode')} style={styles.copy} onPress={() => void Clipboard.setStringAsync(params.roomCode ?? '')}><Image source={folkAssets.icons.copy} style={styles.copyIcon} /><Text style={styles.copyText}>{text('copyCode')}</Text></Pressable>
+          <Text accessibilityLiveRegion="polite" style={styles.status}>{text('playersReady')}: {snapshot?.players.length ?? 1} / 2</Text>
+          <Text style={styles.waiting}>{text('waitingOpponent')}</Text>
+          <FolkButton variant="blue" accessibilityLabel={text('leaveRoom')} onPress={() => void leave()}>{text('leaveRoom')}</FolkButton>
+        </FolkPanel>
+      </View>
+    </FolkSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', backgroundColor: '#F5E7C5', flex: 1, justifyContent: 'center', padding: 24 },
-  title: { color: '#43291F', fontSize: 30, fontWeight: '900' },
-  label: { color: '#755846', fontSize: 14, marginTop: 28 },
-  code: { color: '#A63D2F', fontSize: 36, fontWeight: '900', letterSpacing: 8, marginTop: 8 },
-  status: { color: '#43291F', fontSize: 17, fontWeight: '700', marginTop: 28 },
-  waiting: { color: '#755846', marginTop: 10 },
-  secondary: { alignItems: 'center', borderColor: '#A63D2F', borderRadius: 14, borderWidth: 2, justifyContent: 'center', marginTop: 36, minHeight: 52, width: '100%' },
-  secondaryText: { color: '#A63D2F', fontWeight: '800' },
+  surface: { padding: 20 },
+  container: { alignItems: 'center', flex: 1, justifyContent: 'center', maxWidth: 520, width: '100%' },
+  plaque: { height: 112, marginBottom: -70, maxWidth: 480, width: '100%' },
+  title: { color: '#FFF3CC', fontSize: 28, fontWeight: '900', marginTop: -46, textShadowColor: '#3A1D13', textShadowOffset: { width: 1, height: 2 }, textShadowRadius: 2 },
+  panel: { marginTop: 28, width: '100%' },
+  label: { color: '#5A3521', fontSize: 14, marginTop: 6, textAlign: 'center' },
+  code: { color: '#A63D2F', fontSize: 36, fontWeight: '900', letterSpacing: 8, marginTop: 8, textAlign: 'center' },
+  copy: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', gap: 8, marginTop: 12, minHeight: 44, padding: 6 },
+  copyIcon: { height: 24, width: 24 },
+  copyText: { color: '#24486B', fontWeight: '800' },
+  status: { color: '#43291F', fontSize: 17, fontWeight: '700', marginTop: 28, textAlign: 'center' },
+  waiting: { color: '#755846', marginBottom: 16, marginTop: 10, textAlign: 'center' },
 });

@@ -1,9 +1,11 @@
 # SPEC.md — RPS Cards
 
-Status: confirmed for MVP planning
+Status: draft — UI remediation scope awaiting user confirmation
+Last verified: 2026-08-06 (native Android UI run; see `tasks/test-result.md`)
 
 Sources: `docs/DEV_PLAN.md`, `docs/document.md`, `docs/ui/01-home.png` through
-`docs/ui/07-result.png`, `docs/ui/ui1.png`, and `docs/assets/README.md`.
+`docs/ui/07-result.png`, `docs/ui/ui1.png`, `docs/assets/README.md`,
+`tasks/test-result.md`, and `tasks/evidence/ui/2026-08-06/`.
 `docs/document.md` is the broader product roadmap; this spec is the binding MVP
 contract when their scopes conflict.
 
@@ -17,6 +19,10 @@ opponent's secret hand or draft card.
 The MVP targets guest players who want to create a private room, invite one
 other person with a short code, and finish a match even after a brief network
 interruption.
+
+This remediation also brings the implemented mobile flow back to the supplied
+UI hierarchy and assets, removes the observed React runtime warning, and keeps
+gameplay, protocol, privacy, and localization contracts unchanged.
 
 MVP success means:
 
@@ -61,9 +67,8 @@ MVP.
 - The seven screen mockups define the MVP flow; `docs/ui/ui1.png` remains the
   detailed battle-composition reference. They are visual references, not full
   screen images to ship.
-- The repository is still greenfield: it contains the product docs, mockups,
-  extracted UI layers, and task trackers, but no application package manifest
-  or product source yet.
+- The MVP source exists in `mobile/`, `server/`, and `game-core/`; this spec
+  records the smallest remediation needed after the 2026-08-06 native run.
 - Room codes default to five characters from uppercase letters and digits with
   `I`, `O`, `0`, and `1` excluded. Mockup codes and placeholder slots are sample
   content, not a second format.
@@ -258,6 +263,65 @@ values in an image are internally inconsistent; no sample value is hard-coded.
   player may cancel and return to Rooms.
 - **Về trang chủ** leaves the finished match and returns Home.
 
+## Requested UI remediation
+
+Scope is limited to the failures recorded in `tasks/test-result.md`. Do not
+change game rules, server authority, protocol payloads, room semantics, or
+privacy boundaries.
+
+### Runtime and shared layout
+
+- Remove the React state-update warning at its root: no state/store writes
+  during render; every subscription effect returns cleanup; async effects use
+  cancellation/active guards; room actions always reset busy state with
+  `try/finally`.
+- Keep normal screens free of development overlays, stuck splash states, and
+  repeated multi-second startup stalls.
+- Make `FolkSurface` safe-area aware. Use layered supplied assets and layout
+  geometry rather than full-screen mockup crops; keep essential art uncropped.
+- Render dynamic text natively inside asset frames with no overlap or clipping.
+  Primary actions and Back hit areas are at least 44 × 44 dp.
+- Verify `320×568`, `360×800`, and `390×844` portrait layouts at font scales
+  1.0 and 1.3 in both locales.
+
+### Screen corrections
+
+- Home: match the reference hierarchy while keeping complete Vietnamese and
+  English labels visible.
+- Rooms: restore the framed room panel/empty/current state and prevent title,
+  room code, and controls from colliding.
+- Lobby: use the hall composition with invitation scroll, two player panels,
+  avatars, VS, ready/waiting status, and Leave action.
+- Draft: show the opponent panel, three identical card backs, woven arena, and
+  instruction scroll with explicit selected/waiting/timeout states.
+- Board: mirror both player halves, score plaques, opponent backs/count and
+  discards, neutral two-slot VS arena, readable fanned hand, selected/locked
+  state, timer, and **Khóa bài**.
+- Reconnecting: show a dimmed, non-interactive active online board with a
+  centered scroll/drum and native countdown; preserve expiry behavior.
+- Result: show outcome stamp, score plaque, four real round-history rows, and
+  working rematch/home actions without crest/title overlap.
+
+### Asset and text rules
+
+- Preserve and reuse the supplied layers under `mobile/src/assets/`; add no
+  screenshot-based UI and do not bake runtime text into art.
+- Runtime data wins over sample values in mockups. Card labels and status cues
+  remain readable and are not color-only.
+
+## Remediation exit criteria
+
+- Cold launch and every exercised screen flow produce no React state-update or
+  subscription-leak warning.
+- Native screenshots for MOB-VIS-001 through MOB-VIS-007 match the reference
+  hierarchy, with no overlap or clipping in the supported matrix.
+- Reconnecting is verified with two active clients; otherwise it remains
+  explicitly blocked and is not claimed as passed.
+- All actions have accessible names and 44 dp hit areas; no normal-screen
+  overlay obscures content.
+- `npm run verify`, `cd mobile && npx expo-doctor`, and `git diff --check`
+  pass; device evidence records startup responsiveness and the tested matrix.
+
 ### Advertising
 
 - Use test ad units in development and non-production builds.
@@ -286,8 +350,7 @@ the same operation identifier are idempotent; conflicting retries are rejected.
 
 ## Architecture
 
-This is the target structure to create during bootstrap; only `docs/`,
-`tasks/`, `SPEC.md`, and the template support files exist today.
+Current repository structure; these seams are binding for UI remediation:
 
 ```text
 .
@@ -346,12 +409,13 @@ each player.
   using its test interstitial IDs outside production. Do not add a second ad
   abstraction or network for MVP.
 
-Exact dependency versions will be pinned by the bootstrap task after this spec
-is confirmed. No application package manifest exists yet.
+- The root uses npm workspaces. The current mobile package is Expo `~57.0.10`,
+  React Native `0.86.2`, React `19.2.3`, Expo Router `~57.0.10`, Reanimated
+  `4.5.1`, and Zustand `5.0.14`; preserve the installed stack during this fix.
 
 ## Commands
 
-These root scripts are the command contract to create during bootstrap:
+Current root scripts and checks:
 
 ```bash
 npm install
@@ -364,6 +428,8 @@ npm run typecheck
 npm run lint
 npm run build:server
 npm run verify
+cd mobile && npx expo-doctor
+git diff --check
 ```
 
 `dev:mobile` maps to `expo start --dev-client`; `mobile:android` and
@@ -607,6 +673,8 @@ validation branch, and reported regression requires a runnable test.
 - Represent win/loss/valid/locked states with text or symbols as well as color.
 - Treat the UI mockups as reference compositions; render real controls and
   layered assets instead of shipping screenshots as app surfaces.
+- Fix the root lifecycle/layout defect evidenced by the native run and attach
+  reproducible device evidence for each changed screen.
 
 ### Ask first
 
@@ -620,6 +688,8 @@ validation branch, and reported regression requires a runnable test.
 - Add server-side live-room persistence, deploy infrastructure, native
   permissions, CI/release signing, or production ad identifiers.
 - Expand MVP to any P2 or later feature.
+- Add new art, dependencies, or a rendering approach beyond the supplied
+  layers without first confirming the scope.
 
 ### Never do
 
@@ -634,6 +704,8 @@ validation branch, and reported regression requires a runnable test.
 - Commit secrets, production ad IDs, signing material, or generated vendor/build
   output.
 - Commit changes unless explicitly requested.
+- Hide a warning with an overlay, write state during render, reduce touch
+  targets below 44 dp, or replace missing composition with a screenshot.
 
 ## Acceptance Criteria
 
@@ -695,6 +767,9 @@ validation branch, and reported regression requires a runnable test.
   runtime text remains native and the full-screen mockups are never shipped as UI.
 - App launch restores the user's interface/card/board loadout; the MVP catalog
   resolves every missing or unknown cosmetic ID to `folk_default`.
+- Native evidence must show no title/crest/code/card overlap, no clipped
+  Vietnamese or English labels at font scale 1.3, and complete reference
+  composition on Home, Rooms, Lobby, Draft, Board, and Result.
 
 ## Out of Scope
 
@@ -717,3 +792,8 @@ Defaults below apply if the spec is confirmed without changes:
    timeout, and a 25-second reconnect default.
 3. Deployment target, production ad IDs, monitoring, privacy/consent markets,
    and release signing remain intentionally undecided until P2.
+4. For this remediation, use supplied assets and reference hierarchy with
+   runtime data taking precedence over sample mockup text. Confirm whether a
+   stricter pixel-level match is required.
+5. Confirm access to two active clients for Reconnecting verification; without
+   it, MOB-VIS-006 remains blocked rather than being inferred as passed.

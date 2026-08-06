@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { createOnlineRoomClient } from '../game/colyseus-client';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
 import type { RoomProjection } from '@rps-cards/game-core';
 import { deleteReconnectCredential } from '../security/reconnect-credential';
+import { FolkButton } from '../components/FolkButton';
+import { FolkPanel } from '../components/FolkPanel';
+import { FolkSurface } from '../components/FolkSurface';
 
 export function OnlineResultScreen() {
   const router = useRouter();
@@ -27,7 +30,7 @@ export function OnlineResultScreen() {
   useEffect(() => {
     if (snapshot?.phase === 'DRAFT_PLAYER_A' || snapshot?.phase === 'DRAFT_PLAYER_B') router.replace({ pathname: '/draft', params: { roomCode: params.roomCode, sessionId: params.sessionId } });
   }, [params.roomCode, params.sessionId, router, snapshot?.phase]);
-  if (!snapshot || !snapshot.result || !params.roomCode || !params.sessionId) return <View style={styles.container}><Text>{text('loading')}</Text></View>;
+  if (!snapshot || !snapshot.result || !params.roomCode || !params.sessionId) return <FolkSurface background="village" contentStyle={styles.container}><Text style={styles.loading}>{text('loading')}</Text></FolkSurface>;
   const winner = snapshot.result.winner === snapshot.own.seat ? text('youWin') : text('opponentWins');
   const rematchReady = snapshot.rematchReady?.includes(snapshot.own.seat) ?? false;
   const rematch = async () => {
@@ -41,14 +44,8 @@ export function OnlineResultScreen() {
     router.replace('/rooms');
   };
   return (
-    <View style={styles.container}>
-      <Text accessibilityRole="header" style={styles.title}>{text('result')}</Text>
-      <Text style={styles.winner}>{winner}</Text>
-      <Text style={styles.score}>{text('score')}: {snapshot.result.scores.PLAYER_A} – {snapshot.result.scores.PLAYER_B}</Text>
-      <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || rematchReady }} disabled={busy || rematchReady} style={[styles.primary, (busy || rematchReady) && styles.disabled]} onPress={() => void rematch()}><Text style={styles.primaryText}>{rematchReady ? text('rematchWaiting') : text('rematch')}</Text></Pressable>
-      <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => void leave()}><Text style={styles.secondaryText}>{text('leaveRoom')}</Text></Pressable>
-    </View>
+    <FolkSurface background="village" contentStyle={styles.container}><FolkPanel style={styles.panel}><Text accessibilityRole="header" style={styles.title}>{text('result')}</Text><Text style={styles.winner}>{winner}</Text><Text style={styles.score}>{text('score')}: {snapshot.result.scores.PLAYER_A} – {snapshot.result.scores.PLAYER_B}</Text><FolkButton accessibilityLabel={rematchReady ? text('rematchWaiting') : text('rematch')} disabled={busy || rematchReady} onPress={() => void rematch()}>{rematchReady ? text('rematchWaiting') : text('rematch')}</FolkButton><FolkButton variant="blue" accessibilityLabel={text('leaveRoom')} onPress={() => void leave()}>{text('leaveRoom')}</FolkButton></FolkPanel></FolkSurface>
   );
 }
 
-const styles = StyleSheet.create({ container: { alignItems: 'center', backgroundColor: '#F5E7C5', flex: 1, justifyContent: 'center', padding: 24 }, title: { color: '#43291F', fontSize: 30, fontWeight: '900' }, winner: { color: '#A63D2F', fontSize: 24, fontWeight: '800', marginTop: 18 }, score: { color: '#755846', fontSize: 18, marginTop: 10 }, primary: { alignItems: 'center', backgroundColor: '#A63D2F', borderRadius: 14, justifyContent: 'center', marginTop: 36, minHeight: 52, minWidth: 220, paddingHorizontal: 12 }, disabled: { opacity: 0.55 }, primaryText: { color: '#FFF9EC', fontWeight: '800', textAlign: 'center' }, secondary: { alignItems: 'center', borderColor: '#A63D2F', borderRadius: 14, borderWidth: 2, justifyContent: 'center', marginTop: 12, minHeight: 52, minWidth: 220 }, secondaryText: { color: '#A63D2F', fontWeight: '800' } });
+const styles = StyleSheet.create({ container: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 24 }, panel: { maxWidth: 480, width: '100%' }, title: { color: '#8A241A', fontSize: 30, fontWeight: '900', textAlign: 'center' }, winner: { color: '#A63D2F', fontSize: 24, fontWeight: '800', marginTop: 18, textAlign: 'center' }, score: { color: '#755846', fontSize: 18, marginTop: 10, textAlign: 'center' }, disabled: { opacity: 0.55 }, loading: { color: '#FFF3CC' } });
