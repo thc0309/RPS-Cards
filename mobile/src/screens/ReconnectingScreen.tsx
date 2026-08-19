@@ -1,13 +1,11 @@
-import { useEffect } from 'react';
-import { Image, StyleSheet, Text } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { createOnlineRoomClient } from '../game/colyseus-client';
 import { translate } from '../i18n';
 import { deleteReconnectCredential, readReconnectCredential } from '../security/reconnect-credential';
 import { useAppStore } from '../store/app-store';
-import { FolkPanel } from '../components/FolkPanel';
-import { FolkSurface } from '../components/FolkSurface';
-import { folkAssets } from '../ui/folk-assets';
+import { FolkReconnectingView } from '../components/FolkGameViews';
+import { useCountdownSeconds } from '../ui/countdown';
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -17,6 +15,8 @@ export function ReconnectingScreen() {
   const locale = useAppStore((state) => state.locale);
   const setActiveRoom = useAppStore((state) => state.setActiveRoom);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  const [deadline] = useState(() => Date.now() + 25_000);
+  const remaining = useCountdownSeconds(deadline);
   useEffect(() => {
     let active = true;
     const run = async () => {
@@ -49,7 +49,5 @@ export function ReconnectingScreen() {
     void run();
     return () => { active = false; };
   }, [params.roomCode, params.sessionId, router, setActiveRoom]);
-  return <FolkSurface background="village" contentStyle={styles.container}><Image source={folkAssets.decorations.drum} style={styles.drum} /><FolkPanel style={styles.panel}><Text accessibilityRole="header" style={styles.title}>{text('reconnecting')}</Text><Text style={styles.body}>{text('reconnectingBody')}</Text></FolkPanel></FolkSurface>;
+  return <FolkReconnectingView title={text('reconnecting')} body={text('reconnectingBody')} remaining={remaining} />;
 }
-
-const styles = StyleSheet.create({ container: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 24 }, panel: { maxWidth: 480, width: '100%' }, drum: { height: 150, marginBottom: -32, width: 150, zIndex: 1 }, title: { color: '#8A241A', fontSize: 28, fontWeight: '900', textAlign: 'center' }, body: { color: '#5A3521', marginTop: 14, textAlign: 'center' } });

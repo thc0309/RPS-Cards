@@ -1,6 +1,10 @@
 # Implementation Plan — RPS Cards MVP
 
-Status: T01–T12 complete; T13/T14 open; remediation plan awaiting implementation
+Status: T01–T12 complete; Android remediation/evidence active; iOS validation deferred
+
+Current execution order is Android-only through T13-R, T15–T22 and the Android
+portion of T14. iOS remains required for the later cross-platform release gate,
+but it does not block completion of the current Android milestone.
 
 `SPEC.md` là hợp đồng sản phẩm. File này chỉ ánh xạ thứ tự, phụ thuộc và
 checkpoint. Chi tiết kỹ thuật, file dự kiến, tiêu chí nghiệm thu và lệnh chạy
@@ -121,7 +125,7 @@ PASS, iOS and two-device native cases BLOCKED.
 | Task | Kết quả | Phụ thuộc | Chi tiết | Skills chính |
 |---|---|---|---|---|
 | T12 | Boundary hardening, rate limits, safe diagnostics và privacy regression suite | T11 | [T12](detail-tasks/T12-security-observability.md) | `security-and-hardening`, `vibe-review` |
-| T13 | Android/iOS portrait, accessibility, vi/en fit, reduced motion và measured Skia decision | T06, T11 | [T13](detail-tasks/T13-ui-accessibility-performance.md) | `frontend-ui-engineering`, `performance-optimization` |
+| T13 | Android portrait, TalkBack, vi/en fit, reduced motion và measured Skia decision; iOS/VoiceOver deferred | T06, T11 | [T13](detail-tasks/T13-ui-accessibility-performance.md) | `frontend-ui-engineering`, `performance-optimization` |
 
 ### Phase E — UI-reference fidelity remediation
 
@@ -139,9 +143,12 @@ score hoặc fixed coordinates trong ảnh.
 | T19 | Local/online Board khớp `05-board.png`/`ui1.png` | T18 | [T19](detail-tasks/T19-board-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
 | T20 | Reconnecting overlay khớp `06-reconnecting.png` trên board state | T19 | [T20](detail-tasks/T20-reconnecting-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
 | T21 | Local/online Result khớp `07-result.png`, dùng lịch sử runtime | T19 | [T21](detail-tasks/T21-result-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
-| T22 | Matrix screenshot, accessibility, vi/en, small-screen và asset/FPS evidence | T16–T21 | [T22](detail-tasks/T22-ui-visual-evidence.md) | `vibe-e2e`, `performance-optimization`, `vibe-review` |
+| T22 | Android screenshot, TalkBack, vi/en, small-screen và asset/FPS evidence; iOS matrix deferred | T16–T21 | [T22](detail-tasks/T22-ui-visual-evidence.md) | `vibe-e2e`, `performance-optimization`, `vibe-review` |
 
 ### Phase F — Final native evidence
+
+Run the Android subset now. Keep T14 open after the Android milestone because
+the deferred iOS cases are still part of the full cross-platform gate.
 
 | Task | Kết quả | Phụ thuộc | Chi tiết | Skills chính |
 |---|---|---|---|---|
@@ -201,9 +208,9 @@ score hoặc fixed coordinates trong ảnh.
 
 ### Checkpoint E3 — after T20–T22
 
-- Bảy screen reference có vi/en screenshots và explicit PASS/FAIL/BLOCKED record.
-- TalkBack, font scale, reduced motion, asset memory và Android FPS evidence được ghi;
-  iOS giữ BLOCKED nếu runtime vẫn không có.
+- Bảy screen reference có Android vi/en screenshots và explicit PASS/FAIL/BLOCKED record.
+- TalkBack, font scale, reduced motion, asset memory và Android FPS evidence được ghi.
+- iOS/VoiceOver evidence is deferred and does not block this Android checkpoint.
 
 ### Checkpoint F — after T14
 
@@ -211,8 +218,12 @@ score hoặc fixed coordinates trong ảnh.
 - Tất cả case trong `tasks/test-plan.md` là PASS hoặc có FAIL/BLOCKED evidence
   trong `tasks/test-result.md`.
 - Chạy `$vibe-review`; không tự commit hoặc triển khai production.
-- Current status: automated gate PASS; physical iOS/two-device/accessibility/
-  FPS cases BLOCKED and recorded; UI fidelity tasks T15–T22 phải hoàn tất trước T14.
+- Current status: automated gate PASS; Expo Doctor PASS after SDK 57 patch
+  alignment; Android local timeout path PASS; Android create-ad/Lobby and
+  API-assisted two-seat online smoke PARTIAL; emulator Join UI and full
+  four-round two-client Android evidence PASS. Small-screen/font-scale matrix is
+  FAIL on Android and must be fixed before the Android milestone. TalkBack, FPS,
+  and Reconnecting still remain. iOS is deferred.
 
 ## Task-level implementation contracts
 

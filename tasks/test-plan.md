@@ -1,8 +1,11 @@
 # Mobile and E2E Test Plan - RPS Cards MVP
 
-Status: partially executed; native physical cases blocked
+Status: Android execution active; iOS cases deferred
 
 Use this file with `vibe-e2e` or the approved native-device runner. Do not mark PASS without runtime evidence. Record every FAIL/BLOCKED case in `tasks/test-result.md`.
+
+Current milestone: execute Android cases first. Rows requiring iOS or VoiceOver
+remain deferred, not PASS; they are resumed for the later cross-platform gate.
 
 ## Execution Protocol
 
@@ -16,7 +19,7 @@ Use this file with `vibe-e2e` or the approved native-device runner. Do not mark 
 | Case ID | Device / Preconditions | Steps | Expected result | Evidence |
 |---------|------------------------|-------|-----------------|----------|
 | MOB-P0-001 | Android portrait build; fresh guest | Start local play, complete private draft, lock one legal card in each of four rounds, inspect result, tap **Đấu lại**, then **Về trang chủ**. | No stuck phase; used cards disappear from the hand and enter discards in order; exactly four rounds end; both result actions work; no ad appears. | Pending |
-| MOB-P0-002 | iOS portrait build; fresh guest | Repeat MOB-P0-001 on iOS. | Behavior and rules match Android; safe areas do not cover content. | Pending |
+| MOB-P0-002 | iOS portrait build; fresh guest | Repeat MOB-P0-001 on iOS. | Behavior and rules match Android; safe areas do not cover content. | Deferred — Android-first milestone |
 | MOB-P0-003 | Either platform | Rapidly tap a draft card and **Khóa bài**; attempt to reuse a discarded card. | One operation is accepted per step; duplicate/conflicting actions are rejected without corrupting state; used card is unavailable. | Pending |
 | MOB-P0-004 | Either platform; fresh bot match | Let the local draft turn expire, then let one round-selection timer expire without locking. | Draft auto-picks one available card after 5 seconds; round auto-locks one owned unused card after 15 seconds; each phase advances once and the match remains completable. | Pending |
 
@@ -33,10 +36,10 @@ Use this file with `vibe-e2e` or the approved native-device runner. Do not mark 
 | Case ID | Device / Preconditions | Steps | Expected result | Evidence |
 |---------|------------------------|-------|-----------------|----------|
 | MOB-UI-001 | Small Android portrait around 320x568 dp plus common 360x800 dp | Visit Draft, Board, Reconnecting, and Result; select edge and center cards. | Vietnamese labels, score, timer, cards, and **Khóa bài** are not clipped; targets are at least 44x44 dp; cutouts/navigation bars cover nothing essential. | Pending |
-| MOB-UI-002 | iPhone portrait around 390x844 pt with safe-area cutout | Repeat the critical states and rotate the physical device. | App remains portrait; native status/safe areas are respected; layout hierarchy matches the reference. | Pending |
-| MOB-UI-003 | TalkBack then VoiceOver enabled | Navigate Home, Rooms, Lobby, Draft, Board, Reconnecting, and Result once in Vietnamese and once in English. | Every action/card has a meaningful localized accessible name; focus order follows play order; selected/locked/win/loss are not color-only. | Pending |
+| MOB-UI-002 | iPhone portrait around 390x844 pt with safe-area cutout | Repeat the critical states and rotate the physical device. | App remains portrait; native status/safe areas are respected; layout hierarchy matches the reference. | Deferred — Android-first milestone |
+| MOB-UI-003 | TalkBack enabled; VoiceOver deferred | Navigate Home, Rooms, Lobby, Draft, Board, Reconnecting, and Result once in Vietnamese and once in English. | Every action/card has a meaningful localized accessible name; focus order follows play order; selected/locked/win/loss are not color-only. | Pending Android TalkBack; VoiceOver deferred |
 | MOB-UI-004 | Reduced Motion enabled | Complete draft, card selection, reveal, discard, and result. | Motion is reduced/removed and every transition settles into the same readable final state. | Pending |
-| MOB-UI-005 | Android and iOS portrait; Board with `folk_default` | Inspect upper/lower player zones, central arena, card backs, labels, and discards through multiple rounds. | Upper and lower backgrounds are symmetric player-owned halves; text/art remain upright; the center stays neutral; opponent backs are identical and no decorative element behaves like a control. | Pending |
+| MOB-UI-005 | Android portrait; Board with `folk_default`; iOS repeat deferred | Inspect upper/lower player zones, central arena, card backs, labels, and discards through multiple rounds. | Upper and lower backgrounds are symmetric player-owned halves; text/art remain upright; the center stays neutral; opponent backs are identical and no decorative element behaves like a control. | Pending Android; iOS deferred |
 | MOB-UI-006 | Rooms with no credential, then one saved reconnect credential; force network/ad errors | Inspect empty/current-room states; tap create/join rapidly; open the saved room; retry after each failure. | Exactly one localized current-room row replaces the empty state; busy controls cannot duplicate requests; every failure returns to an editable, non-stuck Rooms state. | Pending; room-entry regression tests automate error/busy behavior |
 | MOB-UI-007 | 320x568 and 390x844 portrait; local and online Board in vi/en | Select each card, inspect **Khóa bài**, let the opponent lock, and complete four rounds. | Búa maps to `ROCK`, Bao to `PAPER`, and Kéo to `SCISSORS`; selection precedes lock; locked status is textual; used cards disappear; per-player discards and `VS` reveal remain readable without wrapping the four-card hand. | Pending; i18n/projection/countdown regressions automate state contracts |
 | MOB-UI-008 | Fresh Android debug launch; routes Home → Rooms → Lobby → Draft → Board → Reconnecting → Result | Capture warning/error logs during cold launch and one pass through every route; repeat after navigating away and back. | No React state-update-before-mount warning, subscription/timer cleanup warning, stuck splash, or normal-screen development overlay; route transitions remain responsive. | Pending — T13-R |
@@ -86,9 +89,12 @@ Sample names/scores/cards in the reference are illustrative; runtime state wins.
 
 | Case ID | Device / Preconditions | Steps | Expected result | Evidence |
 |---------|------------------------|-------|-----------------|----------|
-| MOB-PERF-001 | Representative mid-range Android and one iOS device; profiling tools available | Record board selection, simultaneous reveal, discard movement, and screen transitions with `View`/`ImageBackground`/Reanimated; inspect mounted large assets and listener cleanup. If a named effect fails after ordinary optimization, integrate only that bounded Skia surface, rebuild both development clients, and repeat the exact trace plus accessibility/reduced-motion checks. | Target interactions are stable near 60 fps without leaked timers/listeners or unnecessary mounted scenes. Evidence records `SKIA_NOT_NEEDED`, or measurable before/after improvement with native controls/text still accessible and no Skia objects in persisted state. | Pending |
+| MOB-PERF-001 | Representative mid-range Android; iOS repeat deferred; profiling tools available | Record board selection, simultaneous reveal, discard movement, and screen transitions with `View`/`ImageBackground`/Reanimated; inspect mounted large assets and listener cleanup. If a named effect fails after ordinary optimization, integrate only that bounded Skia surface, rebuild the Android development client, and repeat the exact trace plus accessibility/reduced-motion checks. | Target interactions are stable near 60 fps without leaked timers/listeners or unnecessary mounted scenes. Evidence records `SKIA_NOT_NEEDED`, or measurable before/after improvement with native controls/text still accessible and no Skia objects in persisted state. | Pending Android; iOS deferred |
 
 ## Final Evidence Gate
+
+For the current Android milestone, apply this gate only to active Android rows.
+Deferred iOS rows keep the full cross-platform release gate open.
 
 - [x] `npm run verify` passes for the exact tested source state.
 - [ ] Core unit tests include all nine matchups and the 864 exhaustive final-match cases.

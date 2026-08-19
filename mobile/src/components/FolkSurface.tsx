@@ -1,9 +1,10 @@
 import { ImageBackground, StyleSheet, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { folkAssets } from '../ui/folk-assets';
 
 type FolkSurfaceProps = {
   readonly children: React.ReactNode;
-  readonly background?: 'village' | 'paper';
+  readonly background?: 'village' | 'paper' | 'woven';
   readonly style?: StyleProp<ViewStyle>;
   readonly contentStyle?: StyleProp<ViewStyle>;
 };
@@ -11,9 +12,11 @@ type FolkSurfaceProps = {
 export function FolkSurface({ children, background = 'paper', style, contentStyle }: FolkSurfaceProps) {
   const source: ImageSourcePropType = folkAssets.backgrounds[background];
   return <ImageBackground source={source} resizeMode="cover" style={[styles.surface, style]} imageStyle={styles.image}>
-    <ImageBackground source={folkAssets.backgrounds.paper} resizeMode="repeat" style={[styles.content, contentStyle]} imageStyle={styles.paperTexture}>
-      {children}
-    </ImageBackground>
+    <SafeAreaView style={styles.content}>
+      <ImageBackground source={folkAssets.backgrounds.paper} resizeMode="repeat" style={[styles.content, contentStyle]} imageStyle={styles.paperTexture}>
+        {children}
+      </ImageBackground>
+    </SafeAreaView>
   </ImageBackground>;
 }
 

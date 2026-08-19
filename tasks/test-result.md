@@ -2,7 +2,7 @@
 
 Run date: 2026-08-05 (Asia/Ho_Chi_Minh)
 
-Last updated: 2026-08-06 (Asia/Ho_Chi_Minh)
+Last updated: 2026-08-13 (Asia/Ho_Chi_Minh)
 
 Source state: uncommitted working tree after full-project review hardening. No secret,
 reconnect token, private hand, production ad ID, or stack trace is recorded.
@@ -13,11 +13,11 @@ reconnect token, private hand, production ad ID, or stack trace is recorded.
 |---|---|---|
 | game-core tests | PASS | 13/13, including 864 exhaustive and 10,000 deterministic simulations |
 | server tests | PASS | 23/23, including configured deadlines, bearer authorization, polling expiry, per-player discards and explicit leave |
-| mobile tests | PASS | 14 suites / 33 tests, including entry error containment, bearer-only transport, native ad timeout cleanup, Vietnamese card mapping and countdown |
+| mobile tests | PASS | 16 suites / 35 tests, including entry error containment, bearer-only transport, native ad timeout cleanup, Vietnamese card mapping, countdown, folk assets and round history |
 | typecheck/lint/build | PASS | `npm run verify` on this source state |
-| Expo compatibility | PASS | `npx expo-doctor --verbose`: 20/20 after npm-only lockfile cleanup and SDK 57 package alignment |
+| Expo compatibility | PASS | `npx expo-doctor --verbose`: 20/20 after SDK 57 patch alignment (`expo` 57.0.12, `expo-dev-client` 57.0.11, `expo-router` 57.0.12, `expo-splash-screen` 57.0.6, `jest-expo` 57.0.4) |
 | HTTP authorization smoke | PASS | no bearer `404`; valid bearer `200`; leave `200`; post-leave snapshot `404`, with no credential printed |
-| dependency audit | PASS with note | `npm audit --audit-level=high`: no high/critical; 19 low/moderate transitive findings remain in upstream Expo/Colyseus paths; available forced fixes are breaking downgrades and were not applied |
+| dependency audit | FAIL with note | `npm audit --audit-level=high`: 29 total findings, including 14 high in transitive Expo/Metro and Colyseus auth paths. Available forced fixes downgrade/break `expo` or `colyseus`, so they were not applied during Android evidence. |
 | diff hygiene | PASS | `git diff --check` |
 
 ## Native/device evidence
@@ -37,6 +37,36 @@ reconnect token, private hand, production ad ID, or stack trace is recorded.
 | MOB-NET-001..002 | BLOCKED | Requires two physical devices and actual transport drop; server fake-clock reconnect/expiry tests PASS |
 | MOB-PERF-001 | BLOCKED | No representative iOS device or approved FPS profiler available; `SKIA_NOT_NEEDED` is the code decision, not a 60fps claim |
 | iOS development build | BLOCKED | CocoaPods/Xcode planning completed; `xcodebuild` exit 70 because selected destination has no installed iOS 26.2 runtime |
+
+## Android evidence — 2026-08-13
+
+Source/runtime: dirty working tree with Android-first tracker updates and UI
+remediation already present; no commit created. Local server ran on
+`127.0.0.1:2567`; Metro ran on `8081`; `adb reverse` mapped both ports for
+physical `Pixel_4a` Android 13 and emulator `sdk_gphone16k_arm64`. Evidence
+screenshots are under `tasks/evidence/ui/2026-08-13/`.
+
+| Case(s) | Result | Evidence / blocker |
+|---|---|---|
+| Android dependency compatibility | PASS | `npx expo-doctor --verbose` passes 20/20 after SDK 57 patch alignment; final `npm run verify` passes. |
+| Android launch/log hygiene | PASS for visited routes | Home, Rooms, Lobby, Draft, Board and Result were visited on Android; `logcat` search found no React state-update-before-mount warning and no FATAL/ReactNativeJS crash. Reconnecting route was not exercised in this run. |
+| MOB-P0-004 local timeouts | PASS | On physical Pixel 4a, local draft and round timers auto-advanced to `Match result` with four runtime round rows and usable `Rematch`/`Home` controls. Evidence: `draft-physical-active.png`, `board-physical-round1.png`, `result-physical-timeout.png`. |
+| MOB-P0-001 local tap matrix | PARTIAL | Local flow reached Result and Home via timeout path. ADB card-tap injection did not reliably select a board card, so manual tap/race/rematch coverage remains pending. |
+| MOB-AD-001 create entry gate | PARTIAL | Tapping Create room on physical Android displayed the official AdMob interstitial test ad; closing it continued to Lobby and created room code `RKSL2`. Join-side ad/UI completion remains pending. Evidence: `lobby-physical-created.png`, `lobby-physical-created-after-ad-close.png`. |
+| MOB-P1-001 Android two-client smoke | PARTIAL | Physical create reached Lobby with `Players connected: 1 / 2`; server API join from emulator-side test identity was accepted and room validation returned `full`; physical client advanced to online Board. This is not a full P1 PASS because emulator Join UI did not complete through adb and the online Result captured only one round, not a four-round two-client match. Evidence: `lobby-physical-created-after-ad-close.png`, `online-physical-after-api-join.png`, `online-result-physical-timeout.png`. |
+| MOB-UI-003 accessible names | PARTIAL | UIAutomator exposed localized/English accessible names for major controls and cards on Home, Rooms, Lobby, Board and Result. Manual TalkBack focus-order pass was not run. |
+| MOB-PERF-001 | BLOCKED | No Android frame trace/FPS profiler evidence captured in this run. |
+
+## Android follow-up evidence — 2026-08-13
+
+Source/runtime: same Android-first dirty working tree. Local Colyseus server ran
+on `127.0.0.1:2567`; Metro ran on `8081`; `adb reverse` mapped both ports for
+physical `Pixel_4a` and emulator `sdk_gphone16k_arm64`. iOS remains deferred.
+
+| Case(s) | Result | Evidence / blocker |
+|---|---|---|
+| Emulator Join UI / full two-client four-round | PASS | Physical Android created room `CHBFZ` through the Create-room UI and official AdMob test interstitial; emulator entered `CHBFZ` through the Rooms text field and tapped `Join room`, then both clients advanced into online Draft/Board and completed four rounds. Final result screenshots show consistent opposite perspectives: physical `You win`, score `2 - 1`; emulator `Opponent`, score `1 - 2`; both show Round 1-4 rows. Evidence: `tasks/evidence/ui/2026-08-13/android-two-client/physical-lobby-created.png`, `emulator-code-correct-before-join.png`, `emulator-after-join-tap.png`, `physical-result-4-round.png`, `emulator-result-4-round.png`. |
+| Small-screen/font-scale matrix | FAIL | Emulator 320x568 at density 160 with `font_scale=1.3` rendered Rooms but clipped critical text and controls: placeholder text is cut and Join area is not reachable in the captured viewport after repeated scroll attempts. Emulator 360x800 at density 160 with `font_scale=1.3` clean launch rendered a blank white app surface with only system/status bars; logcat showed ReactHost soft exceptions but no JS crash. Evidence: `tasks/evidence/ui/2026-08-13/android-small-matrix/320x568-fs1_3-rooms-deeplink.png`, `320x568-fs1_3-rooms-scrolled.png`, `320x568-fs1_3-rooms-scroll-deep.png`, `360x800-fs1_3-clean-launch.png`. |
 
 ## UI-reference comparison — 2026-08-06
 

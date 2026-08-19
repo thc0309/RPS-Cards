@@ -1,7 +1,11 @@
 # SPEC.md — RPS Cards
 
-Status: draft — UI remediation scope awaiting user confirmation
+Status: active — Android-first UI remediation; iOS validation deferred
 Last verified: 2026-08-06 (native Android UI run; see `tasks/test-result.md`)
+
+Execution priority: complete and verify the Android UI/runtime milestone first.
+iOS remains in the product contract, but its simulator/device evidence is not a
+blocker for the current Android milestone and will be resumed later.
 
 Sources: `docs/DEV_PLAN.md`, `docs/document.md`, `docs/ui/01-home.png` through
 `docs/ui/07-result.png`, `docs/ui/ui1.png`, `docs/assets/README.md`,
