@@ -1,32 +1,55 @@
-# OS
+# OS and editor noise
 .DS_Store
-
-# Local development
-.codex-log/
-.codex/tmp/
-.codex/*.local.toml
-.env
-.env.*
-!.env.example
-
-# Node and build output
-node_modules/
-dist/
-coverage/
-*.tsbuildinfo
-
-# Expo / native build output
-.expo/
-mobile/.expo/
-mobile/android/
-mobile/ios/
-mobile/.metro/
-mobile/web-build/
-*.ipa
-*.apk
-*.aab
-
-# IDE
+Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Local tooling and temporary files
+.codex-log/
+.codex/tmp/
+.codex/*.local.toml
+tmp/
+.cache/
+.turbo/
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+
+# Node, package-manager, test, and build output
+node_modules/
+dist/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.yarn/
+.pnpm-store/
+
+# Expo / Metro / generated native output
+.expo/
+.metro/
+web-build/
+mobile/.expo/
+mobile/.metro/
+mobile/android/
+mobile/ios/
+expo-env.d.ts
+*.ipa
+*.apk
+*.aab
