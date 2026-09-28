@@ -45,6 +45,8 @@ pnpm-debug.log*
 .expo/
 .metro/
 web-build/
+/android/
+/ios/
 mobile/.expo/
 mobile/.metro/
 mobile/android/
