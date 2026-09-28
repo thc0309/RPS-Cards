@@ -9,7 +9,7 @@ accurately reflects reconnect progress and remaining reservation time.
 
 ## Dependencies and skills
 
-- Dependencies: T19.
+- Dependencies: T24.
 - Skills: `vibe-build`, `frontend-ui-engineering`, `vibe-test`.
 
 ## Technical implementation

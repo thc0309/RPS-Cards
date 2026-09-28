@@ -33,5 +33,5 @@ export function DraftScreen() {
   }, [router, snapshot?.result]);
 
   if (!adapter || !snapshot) return <FolkSurface background="woven">{null}</FolkSurface>;
-  return <FolkDraftView title={text('draftTitle')} status={snapshot.status === 'WAITING' ? text('opponentHasPicked') : snapshot.status === 'COMPLETE' ? text('waiting') : text('available')} instruction={text('draftInstruction')} timer={remaining} cardBackLabel={text('cardBack')} positions={snapshot.view.availablePositions.map((item) => item.position)} selectedPosition={snapshot.selectedPosition} disabled={snapshot.status !== 'AVAILABLE'} onPick={(position) => adapter.selectPlayerPosition(position)} />;
+  return <FolkDraftView title={text('draftTitle')} status={snapshot.status === 'WAITING' ? text('opponentHasPicked') : snapshot.status === 'COMPLETE' ? text('waiting') : text('available')} instruction={text('draftInstruction')} timer={remaining} cardBackLabel={text('cardBack')} unavailableLabel={text('unavailable')} positions={snapshot.view.availablePositions.map((item) => item.position)} selectedPosition={snapshot.selectedPosition} disabled={snapshot.status !== 'AVAILABLE'} onPick={(position) => adapter.selectPlayerPosition(position)} />;
 }

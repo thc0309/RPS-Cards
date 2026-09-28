@@ -69,9 +69,6 @@ export function lockCard(state: MatchState, playerId: PlayerId, cardId: string):
   }
 
   const player = state.players[playerId];
-  if (player.lockedCardId !== null) {
-    throw new GameRuleError('PLAYER_ALREADY_LOCKED', `${playerId} already locked a card`);
-  }
   const card = player.cards.find((candidate) => candidate.id === cardId);
   if (!card) {
     const belongsToOtherPlayer = Object.values(state.players).some((candidate) =>
@@ -80,6 +77,7 @@ export function lockCard(state: MatchState, playerId: PlayerId, cardId: string):
     throw new GameRuleError(belongsToOtherPlayer ? 'CARD_NOT_OWNED' : 'CARD_NOT_FOUND', `Cannot lock card ${cardId}`);
   }
   if (card.used) throw new GameRuleError('CARD_ALREADY_USED', `Card ${cardId} was already used`);
+  if (player.lockedCardId === cardId) return state;
 
   const lockedPlayer = copyPlayer(player, { lockedCardId: cardId });
   const players = copyPlayers(state, playerId, lockedPlayer);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import type { CardKind } from '@rps-cards/game-core';
 import { FolkBoardView } from '../components/FolkGameViews';
@@ -39,6 +39,11 @@ export function BoardScreen() {
   useEffect(() => {
     if (snapshot?.match.phase === 'MATCH_RESULT') router.replace('/result');
   }, [router, snapshot?.match.phase]);
+  const lock = useCallback((cardId: string) => {
+    if (!adapter) return;
+    adapter.lockPlayerCard(cardId);
+    setSelectedCardId(null);
+  }, [adapter]);
 
   if (!adapter || !snapshot) return null;
   const player = snapshot.match.players.PLAYER_A;
@@ -47,5 +52,5 @@ export function BoardScreen() {
   const opponentDiscards = snapshot.match.discards.filter((card) => card.playerId === 'PLAYER_B');
   const lastRound = snapshot.match.lastRound;
 
-  return <FolkBoardView opponentName="BOT" playerName={text('you')} scoreLabel={text('available')} opponentScore={opponent.score} playerScore={player.score} opponentCardCount={opponent.cards.filter((card) => !card.used).length} opponentDiscards={opponentDiscards.map((card) => card.kind)} playerDiscards={playerDiscards.map((card) => card.kind)} cards={player.cards.filter((card) => !card.used)} selectedCardId={selectedCardId} locked={Boolean(player.lockedCardId)} busy={false} lastRound={lastRound ? { player: lastRound.playerA.kind, opponent: lastRound.playerB.kind } : null} remaining={remaining} cardBackLabel={text('cardBack')} lockLabel={text('lockCard')} waitingLabel={text('waiting')} selectedLabel={text('selected')} cardLabel={(kind) => cardLabel(kind, locale)} selectedLift={selectedLift(reducedMotion)} onSelect={setSelectedCardId} onLock={() => { if (selectedCardId) { adapter.lockPlayerCard(selectedCardId); setSelectedCardId(null); } }} />;
+  return <FolkBoardView opponentName="BOT" playerName={text('you')} scoreLabel={text('available')} opponentScore={opponent.score} playerScore={player.score} opponentCardCount={opponent.cards.filter((card) => !card.used).length} opponentDiscards={opponentDiscards.map((card) => card.kind)} playerDiscards={playerDiscards.map((card) => card.kind)} cards={player.cards.filter((card) => !card.used)} selectedCardId={selectedCardId} lockedCardId={player.lockedCardId} canLock={snapshot.match.phase === 'ROUND_SELECTION'} busy={false} reducedMotion={reducedMotion} lastRound={lastRound ? { player: lastRound.playerA.kind, opponent: lastRound.playerB.kind } : null} remaining={remaining} cardBackLabel={text('cardBack')} discardLabel={text('discards')} lockLabel={text('lockCard')} waitingLabel={text('waiting')} selectedLabel={text('selected')} cardLabel={(kind) => cardLabel(kind, locale)} selectedLift={selectedLift(reducedMotion)} onSelect={setSelectedCardId} onLock={lock} />;
 }

@@ -2,12 +2,66 @@
 
 Run date: 2026-08-05 (Asia/Ho_Chi_Minh)
 
-Last updated: 2026-08-13 (Asia/Ho_Chi_Minh)
+Last updated: 2026-08-19 (Asia/Ho_Chi_Minh)
 
 Source state: uncommitted working tree after full-project review hardening. No secret,
 reconnect token, private hand, production ad ID, or stack trace is recorded.
 
 ## Automated gates
+
+### T13-R — 2026-08-19
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Mobile regression tests | PASS | 17 suites / 36 tests with `npm run test --workspace mobile -- --runInBand` |
+| Mobile typecheck/lint | PASS | `npm run typecheck --workspace mobile`; `npm run lint --workspace mobile` |
+| Shared safe-area root | PASS | Root `SafeAreaView` removed; `FolkSurface` explicitly owns top/right/bottom/left insets |
+| Native cold launch | DEFERRED | Recheck is coupled to the Samsung Gesture Handler/dev-client build in T24-C |
+
+### T15 — 2026-08-19
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Home render contract | PASS | Localized bot/online/customize actions expose button roles |
+| Android build/install | PASS | Development APK built and opened on Samsung `SM-X210` |
+| Home runtime render | PASS with capture note | Logo, two actions and guest/customize rendered without clipping; dev-client education sheet covered the clean final capture, which remains in T22 |
+| Mounted asset budget | PASS | 7 existing PNGs; 7,426,178 compressed bytes; about 18,230,944 decoded bytes; no new copies |
+
+### T16 — 2026-08-20
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Rooms presentation states | PASS | Empty/saved-room, localized error and busy-disabled create/join component checks |
+| Room entry regression | PASS | Rooms UI + room-entry: 2 suites / 10 tests |
+| Mobile typecheck/lint | PASS | Both workspace commands complete without errors |
+| Android visual capture | DEFERRED | Final vi/en and viewport screenshots remain in T22 |
+
+### T17 — 2026-08-20
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Lobby projection states | PASS | One-player waiting and two-player ready component checks |
+| Copy room code | PASS | Clipboard receives the public five-character room code |
+| Mobile typecheck/lint | PASS | Both workspace commands complete without errors |
+| Expo Doctor | FAIL with follow-up | 19/21; SDK 57 patch drift plus root yarn/npm lockfile conflict. Native dependency alignment is assigned to T24-C |
+
+### T18 — 2026-08-20
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Fixed three-slot Draft | PASS | Two authoritative positions still render slots 1/2/3; slot 3 is disabled, marked and has no `onPress` |
+| Draft/motion/i18n regression | PASS | 4 suites / 9 tests |
+| Server privacy/deadlines | PASS | 23/23 server tests |
+| Mobile typecheck/lint | PASS | Both workspace commands complete without errors |
+
+### T19 — 2026-08-20
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Vertical Board geometry | PASS | Arena is column-oriented with stable opponent and lower drop placeholders |
+| Runtime hand/discards | PASS | Existing state-driven filtering and ordered rails retained; no sample counts hard-coded |
+| Focused mobile regression | PASS | 6 suites / 12 tests |
+| Server + mobile static gates | PASS | Server 23/23; mobile typecheck/lint pass |
 
 | Gate | Result | Evidence |
 |---|---|---|

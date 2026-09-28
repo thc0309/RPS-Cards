@@ -1,6 +1,6 @@
 # T16 — Rooms visual fidelity
 
-Status: planned
+Status: complete (final screenshot matrix delegated to T22)
 
 ## Outcome
 
@@ -53,3 +53,14 @@ rtk npm run lint --workspace mobile
 ```
 
 Run MOB-VIS-002 plus MOB-UI-006 on Android.
+
+## Evidence — 2026-08-20
+
+- Existing paper panel, native Back, title plaque, create/separator/input/join
+  composition already matches the planned responsive hierarchy; no duplicate
+  design-system code or asset was added.
+- Added focused component coverage for empty versus saved room, localized error,
+  and simultaneous create/join disabled state while a mutation is pending.
+- Room entry plus Rooms UI tests pass (2 suites / 10 tests); mobile typecheck and
+  lint pass. The existing `createRoomEntryFlow` remains the single rapid-tap
+  deduplication boundary.

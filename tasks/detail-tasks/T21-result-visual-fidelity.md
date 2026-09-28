@@ -9,7 +9,7 @@ score banner, four-round history and two actions, all from runtime match data.
 
 ## Dependencies and skills
 
-- Dependencies: T19.
+- Dependencies: T24.
 - Skills: `vibe-build`, `frontend-ui-engineering`, `vibe-test`.
 
 ## Technical implementation

@@ -57,14 +57,21 @@ describe('match state', () => {
     assert.deepEqual(revealed.discards, []);
   });
 
-  it('rejects unowned, reused, second-lock and wrong-phase actions', () => {
+  it('replaces a locked card until reveal without consuming either card', () => {
     const state = createMatch(hands());
     expectCode(() => lockCard(state, 'PLAYER_A', 'b1'), 'CARD_NOT_OWNED');
     expectCode(() => lockCard(state, 'PLAYER_A', 'missing'), 'CARD_NOT_FOUND');
 
-    const locked = lockCard(state, 'PLAYER_A', 'a1');
-    expectCode(() => lockCard(locked, 'PLAYER_A', 'a2'), 'PLAYER_ALREADY_LOCKED');
-    const result = resolveLockedRound(lockCard(locked, 'PLAYER_B', 'b1'));
+    const lockedA = lockCard(state, 'PLAYER_A', 'a1');
+    assert.equal(lockCard(lockedA, 'PLAYER_A', 'a1'), lockedA);
+
+    const lockedB = lockCard(lockedA, 'PLAYER_A', 'a2');
+    assert.equal(lockedB.players.PLAYER_A.lockedCardId, 'a2');
+    assert.deepEqual(lockedB.players.PLAYER_A.cards.map((card) => card.used), [false, false, false, false]);
+
+    const restoredA = lockCard(lockedB, 'PLAYER_A', 'a1');
+    assert.equal(restoredA.players.PLAYER_A.lockedCardId, 'a1');
+    const result = resolveLockedRound(lockCard(restoredA, 'PLAYER_B', 'b1'));
     expectCode(() => lockCard(result, 'PLAYER_A', 'a1'), 'INVALID_PHASE');
 
     const next = beginNextRound(result);

@@ -10,6 +10,7 @@ import {
 import { createDeadline, type Deadline } from './deadline';
 
 export const ROUND_TIMEOUT_MS = 15_000;
+export const BOT_THINK_DELAY_MS = 2_000;
 
 export interface LocalMatchState {
   readonly match: MatchState;
@@ -32,7 +33,8 @@ export class LocalMatchAdapter {
   private match: MatchState;
   private deadline: Deadline | null = null;
   private selectedCardId: string | null = null;
-  private timerHandle: unknown = null;
+  private deadlineTimerHandle: unknown = null;
+  private botTimerHandle: unknown = null;
   private operation = 0;
   private listeners = new Set<() => void>();
   private readonly initialHands: Readonly<Record<'PLAYER_A' | 'PLAYER_B', readonly CardInstance[]>>;
@@ -61,15 +63,17 @@ export class LocalMatchAdapter {
   }
 
   lockPlayerCard(cardId: string): void {
-    if (this.match.phase !== 'ROUND_SELECTION' || this.selectedCardId !== null) return;
-    this.accept(() => lockCard(this.match, 'PLAYER_A', cardId));
+    if (this.match.phase !== 'ROUND_SELECTION') return;
+    const firstLock = this.match.players.PLAYER_A.lockedCardId === null;
+    const nextMatch = lockCard(this.match, 'PLAYER_A', cardId);
     this.selectedCardId = cardId;
-    this.lockBotCard();
+    this.accept(() => nextMatch);
+    if (firstLock) this.scheduleBotLock();
     this.resolveIfReady();
   }
 
   rematch(): void {
-    this.clearTimer();
+    this.clearTimers();
     this.match = createMatch(this.initialHands);
     this.selectedCardId = null;
     this.operation = 0;
@@ -78,7 +82,7 @@ export class LocalMatchAdapter {
   }
 
   dispose(): void {
-    this.clearTimer();
+    this.clearTimers();
     this.listeners.clear();
   }
 
@@ -89,11 +93,21 @@ export class LocalMatchAdapter {
     if (card) this.accept(() => lockCard(this.match, 'PLAYER_B', card.id));
   }
 
+  private scheduleBotLock(): void {
+    if (this.botTimerHandle !== null || this.match.phase !== 'ROUND_SELECTION') return;
+    this.botTimerHandle = this.timer.setTimeout(() => {
+      this.botTimerHandle = null;
+      if (this.match.phase !== 'ROUND_SELECTION') return;
+      this.lockBotCard();
+      this.resolveIfReady();
+    }, BOT_THINK_DELAY_MS);
+  }
+
   private resolveIfReady(): void {
     if (this.match.phase !== 'ROUND_REVEAL') return;
     this.match = resolveLockedRound(this.match);
     this.selectedCardId = null;
-    this.clearTimer();
+    this.clearTimers();
     if (this.match.phase === 'ROUND_RESULT') {
       this.match = beginNextRound(this.match);
       this.scheduleDeadline();
@@ -103,21 +117,31 @@ export class LocalMatchAdapter {
 
   private scheduleDeadline(): void {
     if (this.match.phase !== 'ROUND_SELECTION') return;
-    this.clearTimer();
-    const operationAtSchedule = this.operation;
+    this.clearTimers();
     this.deadline = createDeadline(this.now(), ROUND_TIMEOUT_MS);
-    this.timerHandle = this.timer.setTimeout(() => {
-      if (this.match.phase !== 'ROUND_SELECTION' || this.selectedCardId !== null || this.operation !== operationAtSchedule) return;
-      const available = this.match.players.PLAYER_A.cards.filter((card) => !card.used);
-      const card = available[this.randomInt(available.length)];
-      if (card) this.lockPlayerCard(card.id);
+    this.deadlineTimerHandle = this.timer.setTimeout(() => {
+      this.deadlineTimerHandle = null;
+      if (this.match.phase !== 'ROUND_SELECTION') return;
+      if (this.match.players.PLAYER_A.lockedCardId === null) {
+        const available = this.match.players.PLAYER_A.cards.filter((card) => !card.used);
+        const card = available[this.randomInt(available.length)];
+        if (card) {
+          const nextMatch = lockCard(this.match, 'PLAYER_A', card.id);
+          this.selectedCardId = card.id;
+          this.accept(() => nextMatch);
+        }
+      }
+      this.lockBotCard();
+      this.resolveIfReady();
     }, ROUND_TIMEOUT_MS);
     this.emit();
   }
 
-  private clearTimer(): void {
-    if (this.timerHandle !== null) this.timer.clearTimeout(this.timerHandle);
-    this.timerHandle = null;
+  private clearTimers(): void {
+    if (this.deadlineTimerHandle !== null) this.timer.clearTimeout(this.deadlineTimerHandle);
+    if (this.botTimerHandle !== null) this.timer.clearTimeout(this.botTimerHandle);
+    this.deadlineTimerHandle = null;
+    this.botTimerHandle = null;
     this.deadline = null;
   }
 

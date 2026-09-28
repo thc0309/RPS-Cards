@@ -12,7 +12,7 @@ type FolkSurfaceProps = {
 export function FolkSurface({ children, background = 'paper', style, contentStyle }: FolkSurfaceProps) {
   const source: ImageSourcePropType = folkAssets.backgrounds[background];
   return <ImageBackground source={source} resizeMode="cover" style={[styles.surface, style]} imageStyle={styles.image}>
-    <SafeAreaView style={styles.content}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.content}>
       <ImageBackground source={folkAssets.backgrounds.paper} resizeMode="repeat" style={[styles.content, contentStyle]} imageStyle={styles.paperTexture}>
         {children}
       </ImageBackground>

@@ -96,6 +96,10 @@ MVP.
 - Show the inactive player only **Đối thủ đã chọn**. Do not expose or animate the
   selected position. Before the second player's turn, reshuffle and re-index the
   two remaining facedown cards so the first choice cannot be inferred.
+- Keep three facedown visual slots in Draft at all times. The first drafter has
+  three legal positions; after the authoritative pick and reshuffle, the second
+  drafter has two legal positions plus one non-interactive facedown placeholder.
+  The placeholder carries no card data and cannot submit a draft action.
 - Accept one owned, unused card from each player per round.
 - Reveal both locked choices together, resolve the round, update score, and
   append both cards to public discard piles in play order.
@@ -149,7 +153,12 @@ MVP.
 - Consolidate **Tạo phòng** and code-based **Vào phòng** on the Rooms screen.
   The screen may show the player's current reconnectable private room, but it
   must not enumerate every private room on the server.
-- The primary in-round action is **Khóa bài**. Visible actions must work.
+- The primary in-round action is dragging the selected card into the player's
+  arena placeholder to **Khóa bài**; there is no separate visible lock button.
+  While the authoritative phase is still `ROUND_SELECTION`, dragging another
+  unused owned card into the placeholder replaces the held card and returns the
+  previous card to the hand. The same action remains available through an
+  accessible custom action.
 - Support reduced motion; animations must settle into the same readable final
   state when disabled.
 - Use `View`, `ImageBackground`, Gesture Handler, and Reanimated by default.
@@ -195,14 +204,19 @@ priority and state treatment, not fixed pixel coordinates:
    preserving upright text and illustrations.
 3. Show the opponent's nameplate and score first, followed by identical
    facedown card backs and the opponent's public discard pile.
-4. Keep a calm, high-contrast central arena with two reveal slots separated by
-   `VS`. During reveal, only the two current locked cards enter this arena.
+4. Keep a calm, high-contrast central arena with two slots separated by `VS`.
+   The lower player slot is the drag target: a valid drop locks the selected
+   card and settles it into that slot. Before reveal, a valid drop of another
+   card replaces it and animates the previous card back to the hand. The opponent
+   slot stays hidden until the authoritative simultaneous reveal.
 5. Show the player's nameplate and score above a fanned hand. The selected card
    moves forward, gains a turmeric border, and remains readable without hiding
    the adjacent cards' labels.
-6. Keep **Khóa bài** as the only primary round action. Its attached circular
-   badge shows the authoritative remaining selection time when a timer applies;
-   it is hidden when no timer is active.
+6. Do not render a separate **Khóa bài** button. Show the authoritative remaining
+   selection time near the player's drag target when a timer applies; hide it
+   when no timer is active. A drop outside the target returns the card to the
+   hand and sends no lock action. Replacing a held card does not reset the
+   authoritative deadline.
 7. After each reveal, move both cards to public discard piles in round order.
    The opponent's remaining hand stays facedown and exposes only its count.
 
@@ -296,11 +310,12 @@ privacy boundaries.
   room code, and controls from colliding.
 - Lobby: use the hall composition with invitation scroll, two player panels,
   avatars, VS, ready/waiting status, and Leave action.
-- Draft: show the opponent panel, three identical card backs, woven arena, and
-  instruction scroll with explicit selected/waiting/timeout states.
+- Draft: show the opponent panel, three fixed facedown slots, woven arena, and
+  instruction scroll with explicit available/unavailable/selected/waiting/timeout
+  states. Never collapse the row to two visible cards.
 - Board: mirror both player halves, score plaques, opponent backs/count and
   discards, neutral two-slot VS arena, readable fanned hand, selected/locked
-  state, timer, and **Khóa bài**.
+  state, timer, and drag-to-lock player placeholder.
 - Reconnecting: show a dimmed, non-interactive active online board with a
   centered scroll/drum and native countdown; preserve expiry behavior.
 - Result: show outcome stamp, score plaque, four real round-history rows, and
@@ -349,8 +364,11 @@ WAITING
 ```
 
 Each transition is accepted only from its expected phase. A player may submit
-at most one draft choice and one card lock for the current step. Retries with
-the same operation identifier are idempotent; conflicting retries are rejected.
+at most one draft choice and hold at most one active card lock for the current
+round. A new `LOCK_CARD` with a new operation identifier replaces that player's
+active card only while the phase remains `ROUND_SELECTION`; once reveal wins the
+race, later replacements are stale. Retries with the same operation identifier
+are idempotent; conflicting retries are rejected.
 
 ## Architecture
 
@@ -612,7 +630,8 @@ deterministic rules; do not add a second core test framework:
 - all nine ordered card matchups;
 - two players cannot claim the same draft position;
 - an unowned or discarded card cannot be locked;
-- a second lock in the same round is rejected;
+- a second valid lock replaces the first during `ROUND_SELECTION`, returns the
+  previous card to the available hand, and is rejected after reveal starts;
 - exactly four rounds are played and discard order is preserved;
 - all six different extra-card pairings across 144 play orders per pairing
   produce no tied final match;
@@ -627,6 +646,8 @@ clients:
 
 - create, validate, join, capacity, and room-code collision handling;
 - phase/round/ownership validation and idempotent retries;
+- repeated `LOCK_CARD` actions replace only the caller's private active card,
+  preserve the original deadline and reveal no card identity to the opponent;
 - simultaneous reveal and timeout behavior;
 - separate 5-second draft deadlines auto-pick only an available card;
 - the inactive drafter receives no selected position, and the second player's
@@ -722,7 +743,8 @@ validation branch, and reported regression requires a runnable test.
   card on expiry.
 - An inactive player cannot observe the opponent's selected draft position; the
   remaining positions are reshuffled before the second pick.
-- Used cards cannot be replayed; each player locks at most one card per round.
+- Used cards cannot be replayed; each player holds at most one active card per
+  round and may replace it only before authoritative reveal.
 - A match ends after exactly four rounds with a deterministic winner.
 - The 864 exhaustive extra-card/play-order cases contain no tied match result.
 - Network payload and reconnect tests prove that opponent secrets are absent.
@@ -756,11 +778,20 @@ validation branch, and reported regression requires a runnable test.
 - English labels are not clipped on the same supported portrait ratios, and the
   user can switch between `vi` and `en` without losing the active session.
 - Drafting, waiting, locked, reveal, reconnect, and result states are explicit.
+- Draft always renders three facedown slots; only authoritative available
+  positions are actionable, and the non-interactive placeholder leaks no card.
 - The two player halves and shared reveal zone remain visually distinct.
 - The upper and lower board backgrounds are vertically symmetric player-owned
   halves; text and illustrations remain upright rather than being flipped.
 - The board preserves the reference hierarchy: opponent header/hand/discards,
-  central `VS` reveal arena, then player score/hand/**Khóa bài** action.
+  central `VS` arena with the player drop target, then player score/hand/timer.
+- Dragging a selected card into the player placeholder commits exactly one lock;
+  an invalid/cancelled drop returns it to the hand without mutation, and TalkBack
+  can invoke the same lock through a localized custom accessibility action.
+- Before reveal, dragging another available card into the placeholder commits one
+  replacement, settles the new card, returns the previous card to the hand and
+  does not reset the timer. A replacement that loses the reveal/timeout race is
+  rejected and reconciles to the authoritative state.
 - Available, selected, locked, revealing, and discarded cards are visibly and
   accessibly distinct; adjacent fanned cards retain readable labels.
 - Opponent card backs remain identical and reveal only the remaining count.

@@ -12,7 +12,14 @@ export function createGameServer(directory?: RoomDirectory) {
     express: (app) => {
       app.use(express.json({ limit: '16kb' }));
       app.get('/health', (_request: Request, response: Response) => response.json({ ok: true }));
-      app.post('/rooms/create', (_request, response) => response.status(201).json(rooms.create()));
+      app.post('/rooms/create', (_request, response) => {
+        try {
+          response.status(201).json(rooms.create());
+        } catch (error) {
+          const code = error instanceof ProtocolError ? error.code : 'INVALID_MESSAGE';
+          response.status(code === 'INVALID_MESSAGE' ? 400 : 500).json({ error: { code } });
+        }
+      });
       app.post('/rooms/validate', (request, response) => {
         const roomCode = typeof request.body?.roomCode === 'string' ? request.body.roomCode : '';
         response.json({ roomCode, status: rooms.validate(roomCode) });
@@ -24,7 +31,8 @@ export function createGameServer(directory?: RoomDirectory) {
           response.json(rooms.join(roomCode, sessionId));
         } catch (error) {
           const code = error instanceof ProtocolError ? error.code : 'ROOM_NOT_FOUND';
-          response.status(code === 'ROOM_FULL' ? 409 : 404).json({ error: { code } });
+          const status = code === 'ROOM_FULL' ? 409 : code === 'UNAUTHORIZED_SEAT' ? 403 : code === 'INVALID_MESSAGE' ? 400 : 404;
+          response.status(status).json({ error: { code } });
         }
       });
       app.post('/rooms/reconnect', (request, response) => {

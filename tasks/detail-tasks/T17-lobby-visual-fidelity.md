@@ -1,6 +1,6 @@
 # T17 — Lobby visual fidelity
 
-Status: planned
+Status: complete (final screenshot matrix delegated to T22)
 
 ## Outcome
 
@@ -51,3 +51,14 @@ rtk npm run mobile:android
 ```
 
 Run MOB-VIS-003 and the Lobby portion of MOB-P1-001.
+
+## Evidence — 2026-08-20
+
+- Focused component checks pass for one-player waiting, two-player ready and the
+  public room-code Clipboard action; all status is derived from projection
+  player count and no private card/theme data is rendered.
+- Mobile typecheck and lint pass. `expo-clipboard` was already present, so no
+  dependency was added.
+- Expo Doctor currently reports 19/21: upstream SDK 57 patch drift and the
+  pre-existing root `yarn.lock` beside npm's lockfile. Package alignment is
+  deferred to T24-C, which already owns native dependency/rebuild work.

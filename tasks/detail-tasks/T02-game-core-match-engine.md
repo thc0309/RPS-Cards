@@ -57,6 +57,8 @@ Engine là nguồn luật duy nhất cho local bot và Colyseus server.
 - [ ] Tất cả 9 ordered matchups đúng Bao thắng Búa, Búa thắng Kéo, Kéo thắng
   Bao; draw chỉ xảy ra khi hai loại giống nhau.
 - [ ] Tests chứng minh illegal ownership, reused card, second lock và wrong phase
+  cho baseline ban đầu; T24-A supersedes only the second-lock rejection with
+  replace-before-reveal semantics
   không mutate input state; legal reveal giữ đúng discard order và score.
 - [ ] Một valid match đi qua đúng state machine, dừng sau round bốn với
   `rulesetVersion: 'classic_v1'`; core không import mobile/server/timer/storage.

@@ -2,7 +2,7 @@
 
 Status: T01–T12 complete; Android remediation/evidence active; iOS validation deferred
 
-Current execution order is Android-only through T13-R, T15–T22 and the Android
+Current execution order is Android-only through T13-R, T15–T25, T22 and the Android
 portion of T14. iOS remains required for the later cross-platform release gate,
 but it does not block completion of the current Android milestone.
 
@@ -17,7 +17,8 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
 - npm workspaces đang hoạt động: `mobile`, `server`, `game-core`; automated
   gameplay/security gates đã xanh, nhưng mobile UI hiện mới là functional shell.
 - Mobile: Expo development build, Expo Router, React Native, Zustand,
-  AsyncStorage, SecureStore, i18n, Reanimated; Skia chỉ theo decision gate.
+  AsyncStorage, SecureStore, i18n, Reanimated; drag-to-lock cần thêm
+  Gesture Handler thành direct dependency; Skia chỉ theo decision gate.
 - Backend: Node.js, Colyseus, authoritative in-memory rooms, typed protocol và
   player-specific private projections.
 - Quality: Node test runner cho core/server, Jest cho mobile, Android/iOS device
@@ -34,6 +35,7 @@ nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
 | `api-and-interface-design` | `game-core` contracts, Colyseus messages, error codes và projections |
 | `security-and-hardening` | Guest credential, reconnect, input validation, privacy và log redaction |
 | `performance-optimization` | Đo animation/FPS, ảnh lớn và decision gate cho Skia |
+| `expo-animation` | Chọn motion tier, Reanimated UI-thread, timing/spring và Reduced Motion cho native Expo |
 | `vibe-review` | Review theo checkpoint và trước E2E cuối |
 | `vibe-e2e` | Quy trình evidence; native execution dùng runner/device đã được chọn |
 | `browser-testing-with-devtools` | Console/warning/screenshot inspection for a web fallback; native device evidence remains the source of truth |
@@ -139,11 +141,17 @@ score hoặc fixed coordinates trong ảnh.
 | T15 | Folk visual foundation và Home khớp `01-home.png` | T13-R | [T15](detail-tasks/T15-folk-foundation-home.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
 | T16 | Rooms khớp `02-rooms.png` với đủ empty/current/error/busy states | T15 | [T16](detail-tasks/T16-rooms-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
 | T17 | Lobby khớp `03-lobby.png`, giữ privacy và live player state | T15, T16 | [T17](detail-tasks/T17-lobby-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
-| T18 | Local/online Draft khớp `04-draft.png` và private selection states | T15 | [T18](detail-tasks/T18-draft-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
-| T19 | Local/online Board khớp `05-board.png`/`ui1.png` | T18 | [T19](detail-tasks/T19-board-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
-| T20 | Reconnecting overlay khớp `06-reconnecting.png` trên board state | T19 | [T20](detail-tasks/T20-reconnecting-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
-| T21 | Local/online Result khớp `07-result.png`, dùng lịch sử runtime | T19 | [T21](detail-tasks/T21-result-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
-| T22 | Android screenshot, TalkBack, vi/en, small-screen và asset/FPS evidence; iOS matrix deferred | T16–T21 | [T22](detail-tasks/T22-ui-visual-evidence.md) | `vibe-e2e`, `performance-optimization`, `vibe-review` |
+| T18 | Local/online Draft luôn giữ ba facedown slots, chỉ authoritative positions được chọn | T15 | [T18](detail-tasks/T18-draft-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T19 | Local/online Board dựng đúng vertical arena, score plaques, discard rail, runtime hand và player drop placeholder | T18 | [T19](detail-tasks/T19-board-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `performance-optimization` |
+| T24-A | Core/server cho phép thay private active lock trước reveal, giữ deadline và protocol shape | T12, T19 | [T24-A](detail-tasks/T24-A-replaceable-lock-contract.md) | `vibe-build`, `vibe-test`, `api-and-interface-design`, `security-and-hardening` |
+| T24-B | Local bot mở cửa sổ thay lá 2 giây, không reset deadline và không leak timer | T24-A | [T24-B](detail-tasks/T24-B-local-replace-window.md) | `vibe-build`, `vibe-test`, `test-driven-development` |
+| T24-C | Cài Gesture Handler trực tiếp, bọc root và rebuild Android client | T19 | [T24-C](detail-tasks/T24-C-gesture-runtime.md) | `vibe-build`, `expo-animation`, `source-driven-development` |
+| T24 | Board drag selected card vào placeholder để lock/thay thế; bỏ visible Lock button | T24-A, T24-B, T24-C | [T24](detail-tasks/T24-gameplay-motion.md) | `vibe-build`, `expo-animation`, `frontend-ui-engineering`, `performance-optimization`, `vibe-test` |
+| T20 | Reconnecting overlay khớp `06-reconnecting.png` trên board state | T24 | [T20](detail-tasks/T20-reconnecting-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T21 | Local/online Result khớp `07-result.png`, dùng lịch sử runtime | T24 | [T21](detail-tasks/T21-result-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
+| T23 | Shared press/selection feedback cho button, card và Back | T15–T21 | [T23](detail-tasks/T23-shared-motion-feedback.md) | `vibe-build`, `expo-animation`, `frontend-ui-engineering`, `vibe-test` |
+| T25 | Result/Reconnecting motion, Reduced Motion và Android profile gate | T23, T24 | [T25](detail-tasks/T25-motion-accessibility-performance.md) | `vibe-build`, `expo-animation`, `performance-optimization`, `vibe-e2e` |
+| T22 | Android screenshot, TalkBack, vi/en, small-screen, motion và asset/FPS evidence; iOS matrix deferred | T16–T25 | [T22](detail-tasks/T22-ui-visual-evidence.md) | `vibe-e2e`, `performance-optimization`, `vibe-review` |
 
 ### Phase F — Final native evidence
 
@@ -193,23 +201,41 @@ the deferred iOS cases are still part of the full cross-platform gate.
 - Interactive mode: review the root-cause fix before T15. `$vibe-build all`:
   continue only when this gate is green.
 
+Evidence 2026-08-19: removed the duplicate root `SafeAreaView` so the shared
+`FolkSurface` is the single inset owner and now declares all four edges
+explicitly. Mobile regression gate is green (17 suites / 36 tests), mobile
+typecheck and lint pass, and `git diff --check` passes. Existing Android
+logcat evidence has no state-update-before-mount warning on visited routes;
+fresh Samsung cold launch is deferred to T24-C.
+
 ### Checkpoint E1 — after T15–T17
 
 - Home → Rooms → Lobby khớp composition của ba reference tương ứng trên Android.
 - Create/join/current-room/error/busy/player-count flows không bị visual refactor làm hỏng.
 - Interactive mode: review navigation shell trước gameplay screens.
 
-### Checkpoint E2 — after T18–T19
+### Checkpoint E2 — after T18, T19, T24-A, T24-B, T24-C and T24
 
-- Draft và Board local/online dùng đúng card art, private/public states, symmetric
-  board halves, reveal arena, discard zones và attached timer badge.
-- `npm run verify`, small-screen layout test và Android screenshot comparison xanh.
+- Draft local/online luôn giữ ba visual slots mà không đổi authoritative two-pick
+  rules; Board có centered score plaques, opponent discard rail, vertical
+  opponent-slot/VS/player-slot arena, runtime 4 → 3 → 2 → 1 hand và timer.
+- Visible Lock button đã được thay atomically bằng drag selected card vào lower
+  placeholder; miss/cancel/timeout/phase-change không gửi mutation.
+- Trước authoritative reveal, drag lá unused khác thay active lock, đưa lá cũ về
+  hand và giữ nguyên deadline; opponent chỉ thấy trạng thái locked, không thấy lá.
+- `npm run verify`, small-screen layout test, drag regression và Android
+  screenshot comparison trên Samsung `SM-X210` xanh.
 - Interactive mode: review core gameplay fidelity trước overlay/result.
 
-### Checkpoint E3 — after T20–T22
+### Checkpoint E3 — after T20–T25 and T22
 
 - Bảy screen reference có Android vi/en screenshots và explicit PASS/FAIL/BLOCKED record.
-- TalkBack, font scale, reduced motion, asset memory và Android FPS evidence được ghi.
+- Shared controls phản hồi trong tối đa 150ms; draft/board/reveal/result motion
+  chỉ dùng transform/opacity trên UI thread và không thay đổi gameplay timing.
+- Draft evidence có đủ ba facedown slots ở first/second/waiting/timeout states;
+  Board evidence có valid/invalid/cancelled/timeout drag và không còn Lock button.
+- TalkBack, font scale, reduced motion, asset memory và Android FPS evidence được ghi,
+  gồm profile run trên Samsung `SM-X210` hoặc thiết bị Android chậm hơn.
 - iOS/VoiceOver evidence is deferred and does not block this Android checkpoint.
 
 ### Checkpoint F — after T14
@@ -229,8 +255,9 @@ the deferred iOS cases are still part of the full cross-platform gate.
 
 Each remediation task is one vertical slice. It may touch its listed screen,
 shared presentation primitive, one focused test, and required asset/i18n entries;
-it must not alter game-core rules or room protocols. Every task closes with its
-automated checks, its matching `MOB-VIS` case, and a sanitized test-result entry.
+it must not alter game-core rules or room protocols except the explicitly scoped
+T24-A replaceable-lock contract. Every task closes with its automated checks,
+its matching test cases, and a sanitized test-result entry.
 
 ### T13-R — root lifecycle/shared layout
 
@@ -249,9 +276,44 @@ automated checks, its matching `MOB-VIS` case, and a sanitized test-result entry
 - Verify each slice with its linked `MOB-VIS` case, vi/en screenshots, focused
   Jest tests, typecheck/lint, and no new runtime warnings.
 
+### T24-A/T24-B/T24-C/T24 — replaceable drag-to-lock slices
+
+- T24-A acceptance: core/server upsert one active lock in `ROUND_SELECTION`, add
+  private `lockedCardId`, preserve deadline/idempotency/privacy and reject stale
+  replacement after reveal. Likely files: `game-core/src/match.ts`, its test,
+  `game-core/src/protocol.ts`, `server/src/rooms/online-room.ts`, its test. Verify
+  focused core/server suites, then `npm run verify`.
+- T24-B acceptance: local bot waits one fixed 2,000ms window after the first
+  player lock; replacement does not restart either timer; timeout/rematch/dispose
+  clears and resolves once. Likely files: local match adapter and its fake-clock
+  test. Verify focused mobile adapter tests and mobile typecheck.
+- T24-C acceptance: direct Expo-compatible Gesture Handler dependency, outer root
+  wrapper, unchanged safe-area/router behavior and successful Samsung `SM-X210`
+  cold launch. Likely files: `mobile/package.json`, root lockfile and `_layout.tsx`.
+  Verify mobile typecheck/lint, Expo Doctor and Android development build.
+- T24 acceptance: selected/remaining unused cards share one measured UI-thread
+  drag path; valid initial/replacement commits once, old card returns to hand,
+  invalid/stale cases reconcile, and TalkBack/Reduced Motion reach the same state.
+  Likely files: `FolkGameViews.tsx` plus test, local Board screen and online Board
+  screen. Verify focused Jest, `npm run verify`, `MOB-MOTION-002` and
+  `MOB-DRAG-001` on Samsung `SM-X210`.
+
+T24-A and T24-C are independent after T19; T24-B waits for T24-A, and T24 waits
+for all three. Interactive execution still completes one task at a time.
+
+### T23/T25 — remaining motion slices
+
+- T23 extends the existing `FolkButton`, `FolkCard`, `FolkBackButton` and motion
+  helper; press feedback is `scale: 0.97` with a 120ms ease-out ceiling and no
+  new dependency.
+- T25 adds restrained rare/state motion for Result and Reconnecting, then proves
+  Reduced Motion equivalence and Android frame stability before T22.
+- Verify with focused Jest tests, `npm run verify`, `MOB-MOTION-001..003`, and a
+  real Android profile/release build. Dev-build feel is observation only, not FPS evidence.
+
 ### T22/T14 — evidence gates
 
-- T22 is evidence-only after T15–T21: update test plan/results, screenshots,
+- T22 is evidence-only after T15–T25: update test plan/results, screenshots,
   font-scale/safe-area/reduced-motion/accessibility/FPS records, and asset budget.
 - T14 is final; two-client Reconnecting and unavailable iOS remain BLOCKED unless
   the required devices/runtime are actually available.
@@ -262,6 +324,13 @@ automated checks, its matching `MOB-VIS` case, and a sanitized test-result entry
   room hết hạn theo contract.
 - `View`/`ImageBackground`/Reanimated là mặc định. Chỉ thêm Skia sau số đo trong
   T13 chứng minh một acceptance case cụ thể không đạt.
+- Chỉ thêm `react-native-gesture-handler` trực tiếp vì drag-to-lock cần gesture
+  UI-thread và root wrapper. Không thêm loop parallax/ambient nền, Lottie,
+  haptics, Skia hoặc custom JS screen transitions; mở rộng chỉ khi device
+  evidence chứng minh nhu cầu.
+- Local bot dùng fixed 2,000ms think window để replacement có thể được thao tác và
+  test deterministic. Chỉ nâng thành setting nếu device evidence cho thấy nhịp
+  này quá ngắn/dài; không tạo config trước nhu cầu.
 - Dùng các layer trong `docs/assets` làm nguồn; chỉ copy/resize asset thực sự được
   mount vào `mobile/src/assets/folk_default`. Không dùng nguyên mockup full-screen
   vì text/runtime state phải native và hai board halves thuộc từng player.

@@ -7,6 +7,7 @@ export interface ProjectionPlayer {
   readonly draft: { readonly kind: string } | null;
   readonly score: number;
   readonly locked: boolean;
+  readonly lockedCardId: string | null;
   readonly discards: readonly PlayedCard[];
 }
 
@@ -34,6 +35,7 @@ function privatePlayer(player: ProjectionPlayer): PrivatePlayerProjection {
     ...publicPlayer(player),
     hand: player.hand.map(({ id, kind, used }) => ({ id, kind, used })),
     draft: player.draft,
+    lockedCardId: player.lockedCardId,
   };
 }
 

@@ -35,8 +35,9 @@ test('projection includes own secrets and omits opponent secrets and uiThemeId',
   room.join('b');
   const projection = room.projection('a');
   assert.deepEqual(Object.keys(projection).sort(), ['own', 'phase', 'players', 'roomCode', 'round', 'rulesetVersion']);
-  assert.deepEqual(Object.keys(projection.own).sort(), ['boardThemeId', 'cardCount', 'cardSkinId', 'discards', 'draft', 'hand', 'locked', 'score', 'seat']);
+  assert.deepEqual(Object.keys(projection.own).sort(), ['boardThemeId', 'cardCount', 'cardSkinId', 'discards', 'draft', 'hand', 'locked', 'lockedCardId', 'score', 'seat']);
   assert.equal('uiThemeId' in projection, false);
   assert.equal('hand' in projection.players[1]!, false);
   assert.equal('draft' in projection.players[1]!, false);
+  assert.equal('lockedCardId' in projection.players[1]!, false);
 });

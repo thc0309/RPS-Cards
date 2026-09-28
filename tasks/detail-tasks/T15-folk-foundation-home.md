@@ -1,6 +1,6 @@
 # T15 — Folk visual foundation and Home fidelity
 
-Status: planned
+Status: complete (final clean screenshot matrix delegated to T22)
 
 ## Outcome
 
@@ -65,3 +65,16 @@ Capture vi/en Home screenshots on Pixel 4a and compare side-by-side with
 ## Explicitly skipped
 
 - New themes, store/shop UI, custom font dependency, full-screen mockup image.
+
+## Evidence — 2026-08-19
+
+- Home now follows logo → two dominant actions → guest/customize order without
+  the extra subtitle that displaced the reference hierarchy.
+- Focused Home render contract passes and confirms localized accessible button
+  roles for bot, online rooms and customize; mobile typecheck/lint pass.
+- Development APK built and installed on Samsung `SM-X210`; Home rendered with
+  all actions visible. The first dev-client education sheet obscured the clean
+  capture, so T22 still owns the final vi/en screenshot matrix.
+- Mounted Home inventory is 7 existing PNGs, 7,426,178 bytes compressed and
+  about 18,230,944 bytes decoded at source dimensions. No asset was copied or
+  dependency added for this slice.

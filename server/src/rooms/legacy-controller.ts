@@ -14,7 +14,7 @@ export class RpsRoomController {
     if (existing) return existing.seat;
     if (this.players.size >= 2) throw new ProtocolError('ROOM_FULL', 'room already has two players');
     const seat: PlayerId = this.players.size === 0 ? 'PLAYER_A' : 'PLAYER_B';
-    this.players.set(sessionId, { seat, hand: [], draft: null, score: 0, locked: false, discards: [] });
+    this.players.set(sessionId, { seat, hand: [], draft: null, score: 0, locked: false, lockedCardId: null, discards: [] });
     return seat;
   }
   leave(sessionId: string): void { this.players.delete(sessionId); }
@@ -35,7 +35,7 @@ export class RpsRoomController {
     }
     const state = this.snapshot();
     if (action.expectedRound !== state.round || action.expectedPhase !== state.phase) throw new ProtocolError('STALE_OPERATION', 'phase or round no longer matches');
-    if (action.type === 'LOCK_CARD') this.players.set(sessionId, { ...player, locked: true });
+    if (action.type === 'LOCK_CARD') this.players.set(sessionId, { ...player, locked: true, lockedCardId: action.payload.cardId });
     const result = this.projection(sessionId);
     this.operations.set(action.operationId, { fingerprint, result });
     return result;

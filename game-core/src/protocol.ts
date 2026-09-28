@@ -29,6 +29,7 @@ export interface PublicPlayerProjection {
 export interface PrivatePlayerProjection extends PublicPlayerProjection {
   readonly hand: readonly { readonly id: string; readonly kind: string; readonly used: boolean }[];
   readonly draft: DraftProjection | { readonly kind: string } | null;
+  readonly lockedCardId: string | null;
 }
 
 export interface RoomProjection {

@@ -42,6 +42,10 @@ export class OnlineRoomController {
   get isClosed(): boolean { return this.closed; }
   get reconnectTimeoutMs(): number { return this.reservationMs; }
   get idempotencySize(): number { return this.operations.size; }
+
+  isRegisteredSession(sessionId: string): boolean {
+    return this.players.has(sessionId);
+  }
   private readonly players = new Map<string, PlayerRecord>();
   private readonly operations = new Map<string, OperationResult>();
   private readonly randomInt: (maxExclusive: number) => number;
@@ -154,7 +158,8 @@ export class OnlineRoomController {
     if (!record.connected || record.reservationExpired) throw new ProtocolError('ROOM_EXPIRED', 'reconnect reservation expired');
     const action = validateClientAction(rawAction);
     const fingerprint = JSON.stringify(action);
-    const previous = this.operations.get(action.operationId);
+    const operationKey = `${sessionId}\0${action.operationId}`;
+    const previous = this.operations.get(operationKey);
     if (previous) {
       if (previous.fingerprint !== fingerprint) throw new ProtocolError('OPERATION_CONFLICT', 'operationId was reused');
       return previous.result;
@@ -164,7 +169,7 @@ export class OnlineRoomController {
     if (action.type === 'LOCK_CARD') this.applyLock(record.seat, action);
     if (action.type === 'REMATCH_READY') this.applyRematch(record.seat, action.payload.ready);
     const result = this.projection(sessionId);
-    this.operations.set(action.operationId, { fingerprint, result });
+    this.operations.set(operationKey, { fingerprint, result });
     if (this.operations.size > 256) this.operations.delete(this.operations.keys().next().value!);
     return result;
   }
@@ -245,6 +250,7 @@ export class OnlineRoomController {
   }
 
   private startDraft(): void {
+    this.operations.clear();
     this.match = null;
     this.forfeitResult = null;
     this.draft = createDraft(this.randomInt);
@@ -331,6 +337,7 @@ export class OnlineRoomController {
         ...players.find((player) => player.seat === ownSeat)!,
         hand: ownCards.map(({ id, kind, used }) => ({ id, kind, used })),
         draft: draftView,
+        lockedCardId: matchPlayers?.[ownSeat].lockedCardId ?? null,
       },
       lastRound: this.match?.lastRound ? { round: this.match.lastRound.round, playerA: this.match.lastRound.playerA, playerB: this.match.lastRound.playerB } : null,
       result: this.forfeitResult ?? this.match?.result ?? null,

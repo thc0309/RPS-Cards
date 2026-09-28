@@ -36,17 +36,23 @@ khi acceptance criteria và verification trong file tương ứng đã có evide
 
 ## Phase E — UI-reference fidelity remediation
 
-- [ ] [T13-R — Lifecycle and shared layout root fix] — remove React warning, clean effects, safe-area surface, 44dp targets, and responsive text regression before visual slices
+- [x] [T13-R — Lifecycle and shared layout root fix] — removed duplicate root SafeArea wrapper, made FolkSurface own explicit insets; mobile tests/typecheck/lint pass. Native cold-launch recheck remains part of T24-C.
 - [ ] Checkpoint E0 recorded in `tasks/plan.md`
-- [ ] [T15 — Folk foundation and Home](detail-tasks/T15-folk-foundation-home.md)
-- [ ] [T16 — Rooms visual fidelity](detail-tasks/T16-rooms-visual-fidelity.md)
-- [ ] [T17 — Lobby visual fidelity](detail-tasks/T17-lobby-visual-fidelity.md)
+- [x] [T15 — Folk foundation and Home](detail-tasks/T15-folk-foundation-home.md) — focused Home contract PASS; Android build/install and Home render PASS on Samsung SM-X210; clean final screenshot remains in T22.
+- [x] [T16 — Rooms visual fidelity](detail-tasks/T16-rooms-visual-fidelity.md) — empty/current/error/busy UI contract plus room-entry regression PASS; final Android screenshots remain in T22.
+- [x] [T17 — Lobby visual fidelity](detail-tasks/T17-lobby-visual-fidelity.md) — waiting/ready projection and copy-code tests PASS; Expo Doctor patch drift is assigned to T24-C.
 - [ ] Checkpoint E1 recorded in `tasks/plan.md`
-- [ ] [T18 — Draft visual fidelity](detail-tasks/T18-draft-visual-fidelity.md)
-- [ ] [T19 — Board visual fidelity](detail-tasks/T19-board-visual-fidelity.md)
-- [ ] Checkpoint E2 recorded in `tasks/plan.md`
+- [x] [T18 — Draft visual fidelity with three fixed facedown slots](detail-tasks/T18-draft-visual-fidelity.md) — local/online always render three slots; unavailable slot is disabled and non-color marked; focused + server regressions PASS.
+- [x] [T19 — Board reference geometry and player drop placeholder](detail-tasks/T19-board-visual-fidelity.md) — vertical arena, centered score hierarchy, discard rails and stable lower target implemented; focused/server regressions PASS.
+- [x] [T24-A — Authoritative replaceable-lock contract](detail-tasks/T24-A-replaceable-lock-contract.md) — core/server 36 tests prove replaceable private lock and stable deadline.
+- [x] [T24-B — Local bot replacement window](detail-tasks/T24-B-local-replace-window.md) — fake clock proves fixed 2s window and timer cleanup.
+- [x] [T24-C — Gesture runtime foundation](detail-tasks/T24-C-gesture-runtime.md) — Expo Doctor 21/21; Android build/install/cold launch PASS on `RFCW1082JJR`.
+- [x] [T24 — Board drag-to-lock and remove visible Lock button](detail-tasks/T24-gameplay-motion.md) — full verify PASS; physical initial/replacement drag PASS on `RFCW1082JJR`.
+- [x] Checkpoint E2 recorded in `tasks/plan.md` — automated gate and requested Samsung device drag/replacement PASS; final matrix remains T22.
 - [ ] [T20 — Reconnecting visual fidelity](detail-tasks/T20-reconnecting-visual-fidelity.md)
 - [ ] [T21 — Result visual fidelity](detail-tasks/T21-result-visual-fidelity.md)
+- [ ] [T23 — Shared motion feedback](detail-tasks/T23-shared-motion-feedback.md)
+- [ ] [T25 — Motion accessibility and performance](detail-tasks/T25-motion-accessibility-performance.md)
 - [ ] [T22 — UI visual evidence matrix](detail-tasks/T22-ui-visual-evidence.md) — close the Android vi/en, small-screen, TalkBack, reduced-motion and FPS matrix first
 - [ ] Checkpoint E3 recorded in `tasks/plan.md`
 

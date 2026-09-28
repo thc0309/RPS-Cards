@@ -48,8 +48,41 @@ test('waiting projection reports only occupied seats', () => {
   room.dispose();
 });
 
-test('online lock keeps card private, resolves together, and retries idempotently', () => {
+test('idempotency cache is scoped per session and clears on rematch', () => {
   const room = new OnlineRoomController('ABCD2', { randomInt: () => 0 });
+  room.join('a');
+  room.join('b');
+  const sharedOperationId = 'shared-op';
+  const pickDraft = (session: 'a' | 'b', operationId: string) => {
+    const projection = room.projection(session);
+    const draft = projection.own.draft;
+    const position = draft && 'availablePositions' in draft ? draft.availablePositions[0]!.position : 0;
+    room.handle(session, pick(operationId, projection.phase as 'DRAFT_PLAYER_A' | 'DRAFT_PLAYER_B', position));
+  };
+  const first = room.projection('a').phase === 'DRAFT_PLAYER_A' ? 'a' : 'b';
+  pickDraft(first, 'd-a');
+  pickDraft(first === 'a' ? 'b' : 'a', 'd-b');
+  const lock = (operationId: string, cardId: string) => ({
+    type: 'LOCK_CARD',
+    operationId,
+    expectedPhase: 'ROUND_SELECTION',
+    expectedRound: 1,
+    payload: { cardId },
+  } as const);
+  const cardA = room.projection('a').own.hand[0]!.id;
+  const cardB = room.projection('b').own.hand[0]!.id;
+  const fromA = room.handle('a', lock(sharedOperationId, cardA));
+  const fromB = room.handle('b', lock(sharedOperationId, cardB));
+  assert.notEqual(fromA.own.lockedCardId, fromB.own.lockedCardId);
+  assert.equal(fromA.own.lockedCardId, cardA);
+  assert.equal(fromB.own.lockedCardId, cardB);
+  assert.equal(room.idempotencySize, 2);
+  room.dispose();
+});
+
+test('online lock is replaceable, private, deadline-stable, and idempotent until reveal', () => {
+  const timer = new FakeTimer();
+  const room = new OnlineRoomController('ABCD2', { randomInt: () => 0, timer, now: () => 1_000 });
   room.join('a');
   room.join('b');
   const first = room.projection('a');
@@ -66,16 +99,34 @@ test('online lock keeps card private, resolves together, and retries idempotentl
   const a = room.projection('a');
   const b = room.projection('b');
   const cardA = a.own.hand[0]!.id;
+  const replacementA = a.own.hand[1]!.id;
   const cardB = b.own.hand[0]!.id;
   const lock = (operationId: string, cardId: string) => ({ type: 'LOCK_CARD', operationId, expectedPhase: 'ROUND_SELECTION', expectedRound: 1, payload: { cardId } } as const);
   const locked = room.handle('a', lock('lock-a', cardA));
   assert.equal(locked.players.find((player) => player.seat === 'PLAYER_A')?.locked, true);
+  assert.equal(locked.own.lockedCardId, cardA);
   assert.equal('hand' in locked.players.find((player) => player.seat === 'PLAYER_B')!, false);
+  assert.equal('lockedCardId' in room.projection('b').players.find((player) => player.seat === 'PLAYER_A')!, false);
+  const deadlineAt = locked.deadlineAt;
+
+  const same = room.handle('a', lock('lock-a-same', cardA));
+  assert.equal(same.own.lockedCardId, cardA);
+  assert.equal(same.deadlineAt, deadlineAt);
+
+  const replaced = room.handle('a', lock('lock-a-replace', replacementA));
+  assert.equal(replaced.own.lockedCardId, replacementA);
+  assert.equal(replaced.deadlineAt, deadlineAt);
+  assert.deepEqual(replaced.own.hand.map((card) => card.used), [false, false, false, false]);
+  assert.deepEqual(room.handle('a', lock('lock-a-replace', replacementA)), replaced);
+
+  const restored = room.handle('a', lock('lock-a-restore', cardA));
+  assert.equal(restored.own.lockedCardId, cardA);
   const result = room.handle('b', lock('lock-b', cardB));
   assert.equal(result.lastRound?.round, 1);
   assert.deepEqual(result.players.map((player) => player.discards.length), [1, 1]);
   assert.deepEqual(room.handle('b', lock('lock-b', cardB)), result);
   assert.throws(() => room.handle('b', { ...lock('lock-b', cardB), payload: { cardId: 'different' } }), (error: unknown) => error instanceof ProtocolError && error.code === 'OPERATION_CONFLICT');
+  assert.throws(() => room.handle('a', lock('late-replace', replacementA)), (error: unknown) => error instanceof ProtocolError && error.code === 'STALE_OPERATION');
   room.dispose();
 });
 
