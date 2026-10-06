@@ -151,3 +151,27 @@ Reduced Motion, iOS, the second online client, and Android frame tracing.
 
 Conclusion: **NO-GO for UI-reference fidelity and the final native MVP gate.**
 MOB-VIS-001–005 and 007 fail; MOB-VIS-006 remains blocked.
+
+## Android card/UI observation — 2026-10-06
+
+Scope changed by user from Android testing to UI issue aggregation only. No product-code fixes, commit or full-release acceptance claim. Physical Samsung SM-S906E, Android 16/API 36, 1080×2340 at density 450; arm64 Expo development APK built and installed successfully from `df2cf69` plus the uncommitted card artwork refresh. Metro used USB reverse on 8081; no backend/production ads were started.
+
+| Observation | Result | Evidence |
+|---|---|---|
+| Build/install/Home startup | PASS, scoped | Gradle `app:assembleDebug -PreactNativeArchitectures=arm64-v8a` succeeded; `adb install -r` succeeded; Vietnamese Home visible in `tasks/evidence/android/2026-10-06-card-refresh/01-launch.png`. |
+| Local timeout progression | PASS for observed progression only | Draft and selection timeouts advanced to a four-row Result, score 2–1; `06-result-timeout.png`. Full drag/replace/rematch/Home acceptance was not completed. |
+| Card artwork integration | PARTIAL | Faceless symbols and identical lotus backs are present; handheld card frame is cropped with a large diagonal brown band (UI-01). Discard/result card frames render correctly. |
+| Native UI geometry | FAIL | UI-01–UI-07 record card cropping, small-viewport Rooms displacement/placeholder clipping, Home logo/label crowding and Draft text crossing its paper frame. UI-08–UI-12 are separate composition observations against references. |
+| Small viewport/font | FAIL for observed Rooms/Home cases | Same phone overridden to 900×1598 at density 450 (~320×568 dp), font 1.3; Home cold-launched before final capture. Original size/font/timeout restored afterward. |
+| Remaining native matrix | NOT RUN | Lobby, Reconnecting, English, keyboard-open, TalkBack, Reduced Motion, FPS, two-device online/privacy/reconnect and native ads. No full gate PASS. |
+
+Detailed findings and screenshots: [UI-REVIEW.md](evidence/android/2026-10-06-card-refresh/UI-REVIEW.md). No full verify rerun; earlier root test/lint failures are separate baseline findings in the 05/10 project review.
+
+
+## 2026-10-06 — UI-01–UI-12 remediation
+
+- Đã sửa 12 mục UI từ lượt review Android card refresh: frame card, panel trùng trục, placeholder một dòng, cuộn/keyboard, logo/nút và tỷ lệ Home/Draft/Board/Result. Bộ card faceless mới được giữ.
+- Mobile: 21 suites / 48 tests PASS; final Result follow-up 6 tests PASS; typecheck, lint và diff --check PASS. Test mới bảo vệ trạng thái gợi ý/mã nhập và accessibility label.
+- Native: Samsung SM-S906E / RFCTB15AQ6J / Android 16, Expo development build arm64-v8a, Gradle assembleDebug/install PASS. Metro được restart sau các lần sửa. Default 1080×2340/font 1.0 và override 900×1598/font 1.3 trên cùng máy; vi/en Home/Rooms/Draft, bàn phím, cuộn, initial drag và replacement smoke. Không coi debug + Metro là release/offline APK.
+- Ảnh trước được giữ nguyên; đối chiếu từng mục và giới hạn tại [UI fixes REPORT](evidence/android/2026-10-06-ui-fixes/REPORT.md).
+- Không chạy lại root verify; server lint/test baseline từ review 05/10 không được sửa. Online hai máy, Lobby/Reconnecting native, TalkBack, Reduced Motion/FPS và iOS vẫn ngoài bằng chứng này; không đóng T13/T14/T21/T22/T25.

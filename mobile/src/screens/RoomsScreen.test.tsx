@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
+import { TextInput } from 'react-native';
 import { RoomsScreen } from './RoomsScreen';
 
 const mockReplace = jest.fn();
@@ -54,4 +55,18 @@ test('shows recoverable error and disables both mutations while busy', async () 
   expect(tree!.root.findAll((node) => node.props.accessibilityLabel === 'Vào phòng' && node.props.accessibilityState?.disabled).length).toBeGreaterThan(0);
 
   await act(async () => { finish({ ok: true }); });
+});
+
+test('keeps the hint separate from the editable five-character code', async () => {
+  let tree: ReturnType<typeof create>;
+  await act(async () => { tree = create(<RoomsScreen />); });
+  expect(tree!.root.findByProps({ testID: 'room-code-placeholder' }).props.children).toBe('Nhập mã 5 ký tự');
+  const input = tree!.root.findByType(TextInput);
+  expect(input.props.maxLength).toBe(5);
+  expect(input.props.accessibilityLabel).toBe('Nhập mã 5 ký tự');
+  act(() => { input.props.onChangeText('ab12c'); });
+  expect(tree!.root.findByType(TextInput).props.value).toBe('AB12C');
+  expect(tree!.root.findAllByProps({ testID: 'room-code-placeholder' })).toHaveLength(0);
+  act(() => { input.props.onChangeText(''); });
+  expect(tree!.root.findByProps({ testID: 'room-code-placeholder' })).toBeDefined();
 });

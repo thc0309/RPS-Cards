@@ -370,6 +370,15 @@ active card only while the phase remains `ROUND_SELECTION`; once reveal wins the
 race, later replacements are stale. Retries with the same operation identifier
 are idempotent; conflicting retries are rejected.
 
+All four rounds remain in `ROUND_REVEAL` for 800ms before authority resolves,
+then `ROUND_RESULT` for 2100ms (600ms simultaneous flip, 1200ms outcome, 300ms
+discard). Only authority advances; round four advances to `MATCH_RESULT`.
+The 15s selection deadline and BOT's fixed 2s replacement window remain unchanged.
+Before reveal, projections expose lock flags and the viewer's card only; outcome,
+new scores and opponent cards are public only at reveal. Online snapshots carry
+match identity, increasing room revision, response server time and round timeline.
+Clients discard older revisions, catch up late timelines and resync on resume.
+
 ## Architecture
 
 Current repository structure; these seams are binding for UI remediation:

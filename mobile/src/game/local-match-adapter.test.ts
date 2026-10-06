@@ -1,4 +1,4 @@
-import type { CardInstance, CardKind } from '@rps-cards/game-core';
+import { ROUND_PREPARE_MS, ROUND_PRESENTATION_MS, type CardInstance, type CardKind } from '@rps-cards/game-core';
 import { BOT_THINK_DELAY_MS, LocalMatchAdapter, ROUND_TIMEOUT_MS, type MatchTimerApi } from './local-match-adapter';
 
 class FakeTimer implements MatchTimerApi {
@@ -38,6 +38,10 @@ test('replaces A to B to A without moving the bot or round deadlines', () => {
   adapter.lockPlayerCard('a0');
   expect(timer.pendingAt()).toEqual([10_000 + BOT_THINK_DELAY_MS, deadlineAt]);
   timer.advance(1_000);
+  expect(adapter.getState().match.phase).toBe('ROUND_REVEAL');
+  expect(adapter.getState().match.discards).toHaveLength(0);
+  timer.advance(ROUND_PREPARE_MS);
+  expect(adapter.getState().match.phase).toBe('ROUND_RESULT');
   expect(adapter.getState().match.discards.map((card) => card.cardId)).toEqual(['a0', 'b0']);
   expect(adapter.getState().match.players.PLAYER_A.cards.find((card) => card.id === 'a1')?.used).toBe(false);
   adapter.dispose();
@@ -48,6 +52,8 @@ test('timeout auto-locks a legal unused card', () => {
   const timer = new FakeTimer();
   const adapter = new LocalMatchAdapter(hands(), () => 0, { now: () => timer.now, timer });
   timer.advance(ROUND_TIMEOUT_MS);
+  expect(adapter.getState().match.phase).toBe('ROUND_REVEAL');
+  timer.advance(ROUND_PREPARE_MS);
   expect(adapter.getState().match.discards).toHaveLength(2);
   expect(adapter.getState().match.discards.map((card) => card.cardId)).toEqual(['a0', 'b0']);
   adapter.dispose();
@@ -59,6 +65,10 @@ test('runs exactly four rounds, then rematch resets timers to round one', () => 
   for (const cardId of ['a0', 'a1', 'a2', 'a3']) {
     adapter.lockPlayerCard(cardId);
     timer.advance(BOT_THINK_DELAY_MS);
+    expect(adapter.getState().match.phase).toBe('ROUND_REVEAL');
+    timer.advance(ROUND_PREPARE_MS);
+    expect(adapter.getState().match.phase).toBe('ROUND_RESULT');
+    timer.advance(ROUND_PRESENTATION_MS);
   }
   expect(adapter.getState().match.phase).toBe('MATCH_RESULT');
   expect(adapter.getState().match.discards).toHaveLength(8);
@@ -69,5 +79,18 @@ test('runs exactly four rounds, then rematch resets timers to round one', () => 
   expect(adapter.getState().match.discards).toHaveLength(0);
   expect(timer.pendingAt()).toEqual([timer.now + ROUND_TIMEOUT_MS]);
   adapter.dispose();
+  expect(timer.pendingAt()).toEqual([]);
+});
+
+test('rematch and dispose cancel preparation and result callbacks', () => {
+  const timer = new FakeTimer();
+  const adapter = new LocalMatchAdapter(hands(), () => 0, { now: () => timer.now, timer });
+  adapter.lockPlayerCard('a0'); timer.advance(BOT_THINK_DELAY_MS);
+  adapter.rematch(); timer.advance(ROUND_PREPARE_MS);
+  expect(adapter.getState().match.phase).toBe('ROUND_SELECTION');
+  expect(adapter.getState().match.discards).toHaveLength(0);
+  adapter.lockPlayerCard('a0'); timer.advance(BOT_THINK_DELAY_MS); timer.advance(ROUND_PREPARE_MS);
+  adapter.dispose(); timer.advance(ROUND_PRESENTATION_MS);
+  expect(adapter.getState().match.phase).toBe('ROUND_RESULT');
   expect(timer.pendingAt()).toEqual([]);
 });

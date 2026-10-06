@@ -24,11 +24,12 @@ export function FolkButton({ children, variant = 'red', icon, onPress, disabled 
 }
 
 const styles = StyleSheet.create({
-  pressable: { minHeight: 72, width: '100%' },
+  pressable: { minHeight: 64, width: '100%', overflow: 'hidden' },
   background: { flex: 1, justifyContent: 'center' },
-  backgroundImage: { resizeMode: 'stretch' },
-  content: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'center', minHeight: 44, paddingHorizontal: 22 },
-  icon: { height: 38, width: 38 },
-  label: { color: '#FFF0C6', fontSize: 20, fontWeight: '900', letterSpacing: 0.4, textShadowColor: '#43291F', textShadowOffset: { height: 1, width: 1 }, textShadowRadius: 2 },
+  // Both button bitmaps have transparent vertical margins around the central 60%.
+  backgroundImage: { height: '170%', top: '-35%', width: '100%' },
+  content: { alignItems: 'center', flexDirection: 'row', gap: 8, justifyContent: 'center', minHeight: 64, paddingHorizontal: '16%', paddingVertical: 12 },
+  icon: { height: 28, width: 28 },
+  label: { color: '#FFF0C6', flexShrink: 1, fontSize: 18, fontWeight: '900', textAlign: 'center', textShadowColor: '#43291F', textShadowOffset: { height: 1, width: 1 }, textShadowRadius: 2 },
   disabled: { opacity: 0.55 },
 });

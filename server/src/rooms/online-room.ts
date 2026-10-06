@@ -1,4 +1,7 @@
 import {
+  ROUND_PREPARE_MS,
+  ROUND_PRESENTATION_MS,
+  type RoundTimeline,
   beginNextRound,
   completeDraft,
   createDraft,
@@ -33,7 +36,7 @@ const defaultTimer: OnlineTimerApi = {
 
 const cryptoRandomInt = (maxExclusive: number): number => secureRandomInt(maxExclusive);
 
-type OperationResult = { readonly fingerprint: string; readonly result: RoomProjection };
+type OperationResult = { readonly fingerprint: string };
 type PlayerRecord = { readonly seat: PlayerId; readonly ready: boolean; readonly connected: boolean; readonly reconnectToken: string; readonly reservationExpired: boolean; readonly lastSeenAt: number };
 
 export class OnlineRoomController {
@@ -62,6 +65,9 @@ export class OnlineRoomController {
   private deadlineAt: number | null = null;
   private timerHandle: unknown = null;
   private closed = false;
+  private matchId = randomUUID();
+  private revision = 0;
+  private timeline: RoundTimeline | null = null;
 
   constructor(
     roomCode: string,
@@ -88,6 +94,7 @@ export class OnlineRoomController {
     if (this.players.size >= 2) throw new ProtocolError('ROOM_FULL', 'room already has two players');
     const seat: PlayerId = this.players.size === 0 ? 'PLAYER_A' : 'PLAYER_B';
     this.players.set(sessionId, { seat, ready: false, connected: true, reconnectToken: randomUUID(), reservationExpired: false, lastSeenAt: this.now() });
+    this.revision += 1;
     if (this.players.size === 2 && !this.draft && !this.match) this.startDraft();
     return seat;
   }
@@ -162,14 +169,15 @@ export class OnlineRoomController {
     const previous = this.operations.get(operationKey);
     if (previous) {
       if (previous.fingerprint !== fingerprint) throw new ProtocolError('OPERATION_CONFLICT', 'operationId was reused');
-      return previous.result;
+      return this.projection(sessionId);
     }
     this.assertExpected(action);
     if (action.type === 'DRAFT_PICK') this.applyDraftPick(record.seat, action);
     if (action.type === 'LOCK_CARD') this.applyLock(record.seat, action);
     if (action.type === 'REMATCH_READY') this.applyRematch(record.seat, action.payload.ready);
+    this.revision += 1;
     const result = this.projection(sessionId);
-    this.operations.set(operationKey, { fingerprint, result });
+    this.operations.set(operationKey, { fingerprint });
     if (this.operations.size > 256) this.operations.delete(this.operations.keys().next().value!);
     return result;
   }
@@ -189,6 +197,8 @@ export class OnlineRoomController {
       this.forfeitResult = { winner: opponent.seat, scores };
       this.match = this.match ? { ...this.match, phase: 'MATCH_RESULT', result: this.forfeitResult } : null;
     }
+    this.timeline = null;
+    this.revision += 1;
     this.clearDeadline();
   }
 
@@ -251,6 +261,9 @@ export class OnlineRoomController {
 
   private startDraft(): void {
     this.operations.clear();
+    this.matchId = randomUUID();
+    this.timeline = null;
+    this.revision += 1;
     this.match = null;
     this.forfeitResult = null;
     this.draft = createDraft(this.randomInt);
@@ -258,13 +271,23 @@ export class OnlineRoomController {
   }
 
   private resolveRound(): void {
-    if (!this.match) return;
-    this.match = resolveLockedRound(this.match);
+    if (!this.match || this.match.phase !== 'ROUND_REVEAL') return;
     this.clearDeadline();
-    if (this.match.phase === 'ROUND_RESULT') {
-      this.match = beginNextRound(this.match);
-      this.scheduleDeadline(this.roundSelectionTimeoutMs);
-    }
+    const revealAt = this.now() + ROUND_PREPARE_MS;
+    this.timeline = { round: this.match.round, revealAt, completeAt: revealAt + ROUND_PRESENTATION_MS };
+    this.timerHandle = this.timer.setTimeout(() => {
+      this.timerHandle = null;
+      if (!this.match || this.match.phase !== 'ROUND_REVEAL') return;
+      this.match = resolveLockedRound(this.match);
+      this.revision += 1;
+      this.timerHandle = this.timer.setTimeout(() => {
+        this.timerHandle = null;
+        if (!this.match || this.match.phase !== 'ROUND_RESULT') return;
+        this.match = beginNextRound(this.match);
+        this.revision += 1;
+        if (this.match.phase === 'ROUND_SELECTION') this.scheduleDeadline(this.roundSelectionTimeoutMs);
+      }, Math.max(0, this.timeline!.completeAt - this.now()));
+    }, ROUND_PREPARE_MS);
   }
 
   private scheduleDeadline(durationMs: number): void {
@@ -274,6 +297,7 @@ export class OnlineRoomController {
   }
 
   private expire(): void {
+    this.revision += 1;
     if (this.draft) {
       const player = this.draft.currentPlayerId;
       if (player) {
@@ -328,6 +352,10 @@ export class OnlineRoomController {
       ...(this.draft.picks[ownSeat] ? { selectedPosition: this.draft.picks[ownSeat]!.position } : {}),
     } : null;
     const projection: RoomProjection = {
+      matchId: this.matchId,
+      revision: this.revision,
+      serverNow: this.now(),
+      timeline: this.timeline,
       rulesetVersion: 'classic_v1',
       roomCode: this.roomCode,
       phase: this.phase(),
@@ -339,7 +367,7 @@ export class OnlineRoomController {
         draft: draftView,
         lockedCardId: matchPlayers?.[ownSeat].lockedCardId ?? null,
       },
-      lastRound: this.match?.lastRound ? { round: this.match.lastRound.round, playerA: this.match.lastRound.playerA, playerB: this.match.lastRound.playerB } : null,
+      lastRound: this.match?.lastRound ? { outcomeForA: this.match.lastRound.outcomeForA, round: this.match.lastRound.round, playerA: this.match.lastRound.playerA, playerB: this.match.lastRound.playerB } : null,
       result: this.forfeitResult ?? this.match?.result ?? null,
       rematchReady: [...this.players.values()].filter((player) => player.ready).map((player) => player.seat),
     };

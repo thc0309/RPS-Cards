@@ -2,13 +2,14 @@
 
 Status: T01–T12 complete; Android remediation/evidence active; iOS validation deferred
 
-Current execution order is Android-only through T13-R, T15–T25, T22 and the Android
+Current execution order is Android-only through T13-R, T15–T25, T26 (round reveal), T22 and the Android
 portion of T14. iOS remains required for the later cross-platform release gate,
 but it does not block completion of the current Android milestone.
 
 `SPEC.md` là hợp đồng sản phẩm. File này chỉ ánh xạ thứ tự, phụ thuộc và
 checkpoint. Chi tiết kỹ thuật, file dự kiến, tiêu chí nghiệm thu và lệnh chạy
-nằm trong từng tài liệu dưới `tasks/detail-tasks/`.
+nằm trong từng tài liệu dưới `tasks/detail-tasks/`; riêng kế hoạch T26 nằm trong
+phần [T26 — Nhịp sân đấu và lật bài](#t26-round-flow) bên dưới.
 
 ## Skill Intake Summary
 
@@ -151,7 +152,7 @@ score hoặc fixed coordinates trong ảnh.
 | T21 | Local/online Result khớp `07-result.png`, dùng lịch sử runtime | T24 | [T21](detail-tasks/T21-result-visual-fidelity.md) | `vibe-build`, `frontend-ui-engineering`, `vibe-test` |
 | T23 | Shared press/selection feedback cho button, card và Back | T15–T21 | [T23](detail-tasks/T23-shared-motion-feedback.md) | `vibe-build`, `expo-animation`, `frontend-ui-engineering`, `vibe-test` |
 | T25 | Result/Reconnecting motion, Reduced Motion và Android profile gate | T23, T24 | [T25](detail-tasks/T25-motion-accessibility-performance.md) | `vibe-build`, `expo-animation`, `performance-optimization`, `vibe-e2e` |
-| T22 | Android screenshot, TalkBack, vi/en, small-screen, motion và asset/FPS evidence; iOS matrix deferred | T16–T25 | [T22](detail-tasks/T22-ui-visual-evidence.md) | `vibe-e2e`, `performance-optimization`, `vibe-review` |
+| T22 | Android screenshot, TalkBack, vi/en, small-screen, motion và asset/FPS evidence; iOS matrix deferred | T16–T25, T26 | [T22](detail-tasks/T22-ui-visual-evidence.md) | `vibe-e2e`, `performance-optimization`, `vibe-review` |
 
 ### Phase F — Final native evidence
 
@@ -313,7 +314,7 @@ for all three. Interactive execution still completes one task at a time.
 
 ### T22/T14 — evidence gates
 
-- T22 is evidence-only after T15–T25: update test plan/results, screenshots,
+- T22 is evidence-only after T15–T25 and T26: update test plan/results, screenshots,
   font-scale/safe-area/reduced-motion/accessibility/FPS records, and asset budget.
 - T14 is final; two-client Reconnecting and unavailable iOS remain BLOCKED unless
   the required devices/runtime are actually available.
@@ -340,3 +341,172 @@ for all three. Interactive execution still completes one task at a time.
   thêm Maestro/Detox là quyết định riêng vì làm tăng native/CI scope.
 - EAS distribution, production ads, monitoring, privacy paperwork và release
   signing vẫn thuộc P2.
+
+
+### 2026-10-06 — scoped UI repair after card refresh
+
+Completed UI-01–UI-12 from the Android report: bounded bitmaps, separate decorative/content padding, viewport sizing, code hint, keyboard/scroll access, and screen proportions. No gameplay/API changes or dependencies. Evidence and native limits: [REPORT](evidence/android/2026-10-06-ui-fixes/REPORT.md). Broader T21/T22/T14 acceptance remains open.
+
+<a id="t26-round-flow"></a>
+
+## T26 — Nhịp sân đấu và lật bài hai bên
+
+Ngày: 2026-10-06. **PLANNED — chưa triển khai, chưa chạy kiểm thử mới.**
+Phạm vi: kiểm tra sân đấu và thiết kế trọn luồng chọn → chốt → chờ → chuẩn bị
+→ lật đồng thời → thắng/thua/hòa → thu bài → lượt tiếp theo/kết quả trận.
+Giữ bộ ảnh dễ thương không khuôn mặt, luật bốn lượt và thao tác drag-to-lock.
+
+### Kết quả kiểm tra hiện trạng
+
+| Nguồn đã đọc | Khoảng trống cần xử lý |
+|---|---|
+| `mobile/src/game/local-match-adapter.ts`, `resolveIfReady` | Resolve rồi `beginNextRound` ngay trong cùng lần gọi; các emit trung gian không tạo được khoảng trình diễn ổn định. |
+| `server/src/rooms/online-room.ts`, `applyLock`, `resolveRound` | Chốt đủ hai bên cũng resolve rồi sang lượt kế ngay; online không giữ pha chuẩn bị/kết quả để client quan sát. |
+| `game-core/src/match.ts`, `resolveLockedRound` | Đã có outcome WIN/LOSS/DRAW và tính điểm đúng tầng; lượt 4 đi thẳng `MATCH_RESULT`, cần giữ kết quả lượt trước khi kết thúc trận. |
+| `game-core/src/protocol.ts`, `buildProjection` | Có `lastRound` nhưng chưa public outcome và mốc trình diễn; không có revision để phân biệt snapshot cũ. Retry đang trả projection đã cache. |
+| `BoardScreen.tsx`, `OnlineBoardScreen.tsx` | Điều hướng Result ngay khi gặp `MATCH_RESULT`. Online dùng HTTP polling 500ms; poll và action có thể trả khác thứ tự. |
+| `FolkGameViews.tsx`, `FolkBoardView` | Chỉ dựa vào `canLock/lastRound` để hiện mặt bài; chưa có nhịp lật, trạng thái đối thủ đã chốt, thông báo kết quả lượt. Timer vẫn render khi không có deadline. |
+
+Đã xem lại [ảnh sân đấu Android trước kế hoạch](evidence/android/2026-10-06-ui-fixes/04-board.png):
+hai ô trên–dưới và vùng VS là nền bố cục phù hợp. Ảnh tĩnh không chứng minh
+motion; lần này không chạy lại app/thiết bị. SPEC liên quan: Board rules,
+State Machine, authoritative projection, privacy và motion acceptance.
+
+### Luồng và nhịp đề xuất
+
+“Chốt” tiếp tục là **thả lá bài hợp lệ vào ô của mình**, không thêm nút xác nhận.
+
+| Bước | Trình bày trên sân đấu | Điều kiện / nhịp |
+|---|---|---|
+| 1. Chọn | Lá được nâng nhẹ, viền chọn rõ; hướng dẫn “Kéo bài vào ô để chốt”. | Còn bài hợp lệ và đang `ROUND_SELECTION`. |
+| 2. Chốt / chờ | Bài vào ô của mình; “Đã chốt · Chờ đối thủ”. Nếu đối thủ chốt trước, ô trên hiện lưng bài và “Đối thủ đã chốt”. | Chỉ xác nhận sau khi authority nhận lock. Được đổi bài trong selection; giữ deadline 15s và BOT 2s từ lần chốt đầu. |
+| 3. Chuẩn bị lật | Hai ô hiện lưng bài cùng kích thước, viền sáng nhẹ; “Cả hai đã chốt · Chuẩn bị lật bài”. Bài của mình vẫn có nhãn riêng để biết lá đã chọn. | Khi authority nhận đủ hai lock, dừng đổi/kéo bài và ẩn timer chọn bài. Giữ khoảng **800ms**. |
+| 4. Lật đồng thời | Hai lá dùng chung tiến độ xoay Y với perspective, đổi mặt ở giữa vòng xoay; mặt chữ/ảnh luôn thẳng. | **600ms**, chỉ bắt đầu khi có dữ liệu reveal hợp lệ. Không mở lần lượt trên/dưới. |
+| 5. Kết quả lượt | Banner “Bạn thắng lượt này” / “Bạn thua lượt này” / “Hòa lượt này”; nhấn nhẹ lá thắng và điểm +1; hòa không cộng điểm. | **1.200ms**, chỉ hiện sau khi hai mặt bài đã mở. Hiển thị outcome từ authority theo seat người xem. |
+| 6. Thu bài | Hai lá về đúng chồng bài đã ra; giữ thứ tự lượt, không tạo bản sao tạm trong chồng. | **300ms**. Sau đó bắt đầu lượt mới hoặc Result nếu đã đủ bốn lượt. |
+
+Tổng đề xuất từ đủ hai lock đến lượt tiếp theo: **2.900ms**. Đây là giá trị
+khởi đầu để đo trên Android, không thêm setting cho người dùng. Reduced Motion
+thay xoay/nảy/bay bằng đổi trạng thái hoặc fade nhẹ nhưng giữ thời gian đọc và
+cùng thời điểm authority mở lượt mới. Không thêm khuôn mặt, confetti, âm thanh
+hoặc haptics trong phạm vi này.
+
+### Bố cục và phản hồi
+
+- Giữ arena dọc, cùng kích thước/đường giữa cho hai slot. Dành vùng thông báo
+  cố định cạnh VS; chuyển chữ không đẩy slot, hand, score hoặc vùng drop.
+- Badge “đã chốt” chỉ nói trạng thái, không lộ loại/ID bài đối thủ. Số lưng bài
+  còn trên tay phải trừ lá đã đặt vào slot, không vẽ dư một lá; `cardCount` hiện
+  là tổng bài chưa dùng nên điều chỉnh ở view, không đổi nghĩa API.
+- Mặt bài của mình có thể xem trong lúc chờ; chuyển sang lưng bài ở bước chuẩn
+  bị để hai lá cùng mở. Nhãn riêng của mình vẫn đúng; accessibility tree của
+  đối thủ không chứa mặt/loại bài trước reveal.
+- WIN/LOSS/DRAW có chữ và biểu tượng đơn giản, không chỉ dựa màu. Điểm chỉ đổi
+  trên UI ở bước kết quả, dù authority đã tính tại reveal. Giữ snapshot hiển
+  thị trước reveal để không mất lá hoặc nhảy điểm trước khi lật xong.
+- Kiểm tra 320×568dp, 360×800dp và máy Android đang kết nối, vi/en, font 1.0/1.3,
+  hand 4→3→2→1; không cắt bóng/viền khi xoay, banner không che bài/điểm.
+
+### Quyết định về trạng thái và đồng bộ
+
+1. **Tái dùng state machine hiện có.** `ROUND_SELECTION` cho chọn/chờ;
+   `ROUND_REVEAL` giữ khoảng chuẩn bị đã khóa; `ROUND_RESULT` giữ lật/kết quả/thu
+   bài. Không thêm ba phase public chỉ để mô tả animation.
+2. **Lượt 4 đi qua cùng pipeline.** Đề xuất `resolveLockedRound` luôn dừng ở
+   `ROUND_RESULT`; bước advance hiện có mở lượt 2–4 hoặc chuyển `MATCH_RESULT`
+   sau thời gian trình diễn lượt 4. Tính thắng trận theo luật hiện có. Rà tất
+   cả caller và simulation khi đổi contract này; không giữ hai cách kết thúc.
+3. **Authority giữ lịch.** Local adapter/server sở hữu timer chuẩn bị và kết
+   quả, dùng clock/timer inject hiện có. Dừng timer chọn/BOT khi đủ lock; resolve
+   đúng một lần ở mốc reveal; chỉ cấp 15s mới khi thực sự mở lượt tiếp theo.
+   Callback animation không tính điểm, không gửi “reveal done”, không quyết
+   định pha và không giữ server chờ thiết bị.
+4. **Payload đủ để bắt kịp.** Bổ sung typed metadata tối thiểu: định danh trận
+   (đổi khi rematch), revision tăng theo thay đổi authoritative, `serverNow`,
+   timeline lượt `{ round, revealAt, completeAt }`, và `lastRound.outcomeForA`.
+   Giữ timeline và lastRound vừa xong qua lượt tiếp theo; đối chiếu round trước
+   khi dùng để tránh ghép bài lượt cũ vào lượt đang chuẩn bị. `deadlineAt` vẫn
+   chỉ là deadline chọn bài, không dùng làm timer animation trên UI.
+5. **Không tiết lộ sớm.** Trước revealAt: projection chỉ có lock flags/own card,
+   score/discards cũ; không gửi bài đối thủ, outcome hoặc điểm mới để client tự
+   giấu. Tại reveal mới resolve và public đủ hai lá cùng outcome. Local Board
+   áp dụng cùng quy tắc dù adapter local đang giữ cả hai hand.
+6. **Một đường nhận snapshot.** Poll, action response, retry/reconnect đều đi
+   qua kiểm tra revision; bỏ snapshot cũ, không phát lại hiệu ứng cùng
+   `(matchId, round)`. Revision phải tăng xuyên rematch trong room; `serverNow`
+   là thời gian response mới, không được lấy mốc cache cũ để hiệu chỉnh đồng hồ.
+   Giữ idempotency của action, không resolve lại khi retry.
+7. **Mạng chậm và background.** Dùng server time/ước lượng offset từ request để
+   tìm tiến độ hiện tại; không dùng giờ điện thoại trực tiếp. Thiếu payload
+   reveal thì giữ lưng bài. Snapshot tới muộn bắt kịp phần còn lại; nếu hết
+   timeline thì hiện trạng thái mới và tóm tắt kết quả đã biết, không phát lại
+   toàn bộ 2.9s làm mất thời gian chọn của lượt mới. App resume lấy snapshot mới
+   trước khi mở tương tác. Hai lá đồng thời trên mỗi màn hình; không hứa cùng
+   một frame giữa hai điện thoại qua HTTP. Đo lệch giữa thiết bị trong E2E.
+8. **Kết thúc bất thường.** Leave/forfeit, room hết hạn, dispose/rematch phải hủy
+   timer/animation cũ. Forfeit đi nhánh kết quả phù hợp, không dựng giả một lượt
+   reveal từ lastRound cũ. Reconnect vào trận đã kết thúc hiển thị Result; không
+   chờ callback animation đã bị unmount.
+
+Giữ HTTP polling 500ms hiện có cho slice này; metadata bền qua nhiều snapshot
+giúp chịu được việc bỏ lỡ pha ngắn. Chưa đổi sang WebSocket hoặc thêm thư viện.
+Server/mobile phải nâng contract cùng đợt thử nghiệm; client gặp payload cũ thì
+hiện trạng thái tĩnh an toàn, không tự đoán hai bên đã chốt hay đối thủ ra bài gì.
+
+### Skill Intake Summary — T26
+
+Đã đọc frontmatter skill repo. Stack đã xác minh: Expo 57, React Native 0.86,
+Reanimated 4.5.1, Gesture Handler 2.32, core TypeScript, server Node/Colyseus;
+client Board thực tế dùng HTTP. Dùng `vibe-plan`, `planning-and-task-breakdown`,
+`frontend-ui-engineering` và `api-and-interface-design` cho kế hoạch này.
+Khi build: thêm `vibe-build`, `vibe-test`; dùng `security-and-hardening` khi sửa
+projection, `performance-optimization` cho số đo native. Chưa có skill native
+E2E riêng; manual Android + quay video đáp ứng bằng chứng cho phạm vi này,
+không cài Maestro/Detox hoặc skill mới chỉ để lập plan.
+
+### Task Plan — T26
+
+Thứ tự: **T26-A → T26-B → T26-C → T26-D → T26-E → T26-F → T26-G**.
+T26 dựa trên T19/T24 đã triển khai; bổ sung phần reveal cho T25 và là dependency
+mới của T22/T14. Không mở lại checkbox T24 hoặc tự đóng các gate evidence cũ.
+
+| Task / phụ thuộc | Công việc và acceptance | File dự kiến / cỡ việc | Verification / skill triển khai |
+|---|---|---|---|
+| **T26-A — Contract vòng chơi**; sau T24 | Chốt SPEC/timing/projection; cả bốn lượt đều qua `ROUND_RESULT`; advance chỉ mở lượt mới/kết thúc sau result, rules/điểm không đổi. Trace tất cả caller của resolve/advance. | `SPEC.md`; `game-core/src/{match.ts,protocol.ts,match.test.ts,simulation.test.ts}`; M | Core fake-state test cho 1–4, WIN/LOSS/DRAW, invalid transition; exhaustive simulation. `api-and-interface-design`, `vibe-test`. |
+| **T26-B — BOT có đủ từng nhịp**; sau A | Adapter emit và giữ chuẩn bị/result có timeline; Board hiện từng trạng thái bằng UI tĩnh trước, không nhảy Result sớm; chốt/đổi/timeout vẫn đúng 15s/2s. | `mobile/src/game/local-match-adapter{.ts,.test.ts}`, `screens/BoardScreen.tsx`, `components/FolkGameViews{.tsx,.test.tsx}`; M | Fake clock đi qua toàn bộ timeline, lượt cuối, rematch/dispose; component không nhận mặt đối thủ sớm. `vibe-build`, `frontend-ui-engineering`, `vibe-test`. |
+| **T26-C — Online authority giữ pha**; sau B | Server lịch/timeline tương đương BOT; private projection trước reveal, outcome sau reveal; revision/match identity, cached retry, timeout/forfeit không nhân đôi resolve. | `server/src/rooms/online-room.ts`, `server/src/online-room.test.ts`, `game-core/src/protocol.test.ts`; M | Fake-clock integration hai seat: second lock/replacement/deadline race, stale retry, privacy, final round và cleanup. `api-and-interface-design`, `security-and-hardening`, `vibe-test`. |
+| **T26-D — Online Board theo timeline**; sau C | Poll/action dùng chung bộ nhận revision; map A/B đúng; tạo phần trình bày timeline dùng chung hai Board, không duplicate logic; khóa input theo authority. | `screens/{OnlineBoardScreen.tsx,BoardScreen.tsx}`, `game/board-round-presentation{.ts,.test.ts}` (mới, phục vụ cả hai screen), `screens/OnlineBoardScreen.test.tsx` (mới nếu chưa có); M | Snapshot trùng/đảo thứ tự/nhảy pha/rematch; không lấy outcome cũ, không mất lượt 4; fake clock và screen tests. `frontend-ui-engineering`, `vibe-test`. |
+| **T26-E — Lật hai lá và feedback**; sau D | Dùng một shared progress Reanimated cho hai lá; chuẩn bị/flip/banner/thu bài đúng timeline, điểm không bật sớm; vi/en và Reduced Motion giữ cùng thông tin. | `components/FolkGameViews{.tsx,.test.tsx}`, `i18n/{vi.ts,en.ts}`, `game/board-round-presentation.ts`; M | Component assertions cho hidden faces/score/discards/labels; preview native ghi video happy path BOT và online. `frontend-ui-engineering`, `vibe-test`. |
+| **T26-F — Resume/reconnect và tương tác hỗ trợ**; sau E | App resume đồng bộ trước thao tác, cleanup khi unmount; forfeit/kết thúc không replay sai; TalkBack thông báo kết quả một lần, reduced motion đổi giữa animation không kẹt. | `screens/{BoardScreen.tsx,OnlineBoardScreen.tsx,ReconnectingScreen.tsx}`, `game/board-round-presentation{.ts,.test.ts}`; M | Fake-clock background/reconnect giữa từng bước; native bật TalkBack/Reduced Motion, thay font và tái đo slot. `frontend-ui-engineering`, `vibe-test`. |
+| **T26-G — Evidence Android**; sau F | Chạy case `MOB-REVEAL-001..008`, chốt geometry/timing bằng video; ghi rõ PASS/FAIL/BLOCKED, không dùng Jest để xác nhận FPS. | `tasks/test-result.md`, `tasks/evidence/android/<date>-round-reveal/`, `tasks/todo.md`; S | Hai Android online + BOT, vi/en/nhỏ/font1.3/TalkBack/reduced motion; profile/release FPS. `performance-optimization`, `vibe-e2e` theo native evidence protocol. |
+
+Lệnh nền cho đợt build/đánh giá (chưa chạy ở lượt lập plan):
+`rtk npm run test --workspace game-core`, `rtk npm run test --workspace server`,
+`rtk npm run test --workspace mobile -- --runTestsByPath src/game/local-match-adapter.test.ts src/components/FolkGameViews.test.tsx`.
+Sau khi có test mới, chạy thêm đúng file đó; cuối chuỗi chạy `rtk npm run verify`
+và `rtk git diff --check`. Ghi riêng lỗi baseline với regression do T26.
+
+### Phase Checkpoints — T26
+
+- **CP26-1, sau A–B:** contract và BOT hiển thị đủ pha bằng fake clock/UI tĩnh;
+  điểm/luật không đổi. Chốt trước khi gắn online.
+- **CP26-2, sau C–D:** hai seat nhận đủ trạng thái; privacy/revision/race/final
+  round PASS; không để animation che lỗi authority.
+- **CP26-3, sau E–F:** complete flow có animation; Android video chứng minh hai
+  lá cùng lật, nhãn kết quả rõ, không lẹm/lệch, accessibility không bị bỏ qua.
+- **CP26-4, sau G:** cập nhật evidence cho T25/T22/T14 theo case thực sự đã chạy.
+  Hai máy chưa có thì ghi BLOCKED; iOS vẫn deferred, không coi là PASS.
+
+Checkpoint là điểm review khi build từng task, là mốc tiến độ nếu người dùng
+yêu cầu triển khai toàn bộ. Kế hoạch này không tự cấp trạng thái hoàn tất.
+
+### Tradeoffs / điểm cần chốt khi nghiệm thu
+
+- Nhịp 2.9s tăng thời gian mỗi lượt để nhìn rõ kết quả. Chỉ chỉnh các duration
+  sau video thực tế; không thay quy tắc chốt hay thời gian chọn bài.
+- Giữ polling giúp giới hạn phạm vi; mạng trễ có thể bỏ bớt animation để bắt
+  kịp. Nếu yêu cầu hai thiết bị gần cùng frame, đó là scope transport riêng.
+- Thay core final-round transition là thay contract có chủ đích, nên simulation
+  và tất cả caller phải được cập nhật cùng slice; không vá bằng delay router.
+- Không có câu hỏi chặn lập kế hoạch. Mặc định “chốt” là drag-to-lock hiện tại,
+  “hai bên” là hai slot trên cùng sân đấu và kết quả phản chiếu theo người xem.

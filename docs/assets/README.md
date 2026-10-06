@@ -20,3 +20,10 @@
 ## Generation
 
 Generated with built-in ImageGen using the mockups as style references. Isolated assets were rendered on a flat `#ff00ff` chroma background, then converted to RGBA with a soft matte and despill pass.
+
+The five card assets were refreshed on 2026-10-05 with rounded kawaii artwork,
+pastel colors. Facial features were subsequently removed from the three symbols
+and the lotus on the card back. These new PNGs use generated alpha
+transparency directly, without chroma-key conversion. Source and mobile runtime
+copies share the same filenames. Prompts and verification are in
+[cards/GENERATION.md](cards/GENERATION.md).

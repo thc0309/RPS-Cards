@@ -119,29 +119,19 @@ export function resolveLockedRound(state: MatchState): MatchState {
   };
   const discards = [...state.discards, roundResult.playerA, roundResult.playerB];
 
-  if (state.round < 4) {
-    return { ...state, phase: 'ROUND_RESULT', players, discards, lastRound: roundResult };
-  }
-
-  if (nextScoreA === nextScoreB) {
-    throw new GameRuleError('FINAL_TIE_IMPOSSIBLE', 'A completed match cannot end in a tie');
-  }
-  return {
-    ...state,
-    phase: 'MATCH_RESULT',
-    players,
-    discards,
-    lastRound: roundResult,
-    result: {
-      winner: nextScoreA > nextScoreB ? PLAYER_A : PLAYER_B,
-      scores: { PLAYER_A: nextScoreA, PLAYER_B: nextScoreB },
-    },
-  };
+  return { ...state, phase: 'ROUND_RESULT', players, discards, lastRound: roundResult };
 }
 
 export function beginNextRound(state: MatchState): MatchState {
   if (state.phase !== 'ROUND_RESULT') {
     throw new GameRuleError('INVALID_PHASE', `Cannot begin next round during ${state.phase}`);
   }
-  return { ...state, phase: 'ROUND_SELECTION', round: state.round + 1, lastRound: state.lastRound };
+  if (state.round < 4) return { ...state, phase: 'ROUND_SELECTION', round: state.round + 1 };
+  const scoreA = state.players.PLAYER_A.score;
+  const scoreB = state.players.PLAYER_B.score;
+  if (scoreA === scoreB) throw new GameRuleError('FINAL_TIE_IMPOSSIBLE', 'A completed match cannot end in a tie');
+  return { ...state, phase: 'MATCH_RESULT', result: {
+    winner: scoreA > scoreB ? PLAYER_A : PLAYER_B,
+    scores: { PLAYER_A: scoreA, PLAYER_B: scoreB },
+  } };
 }

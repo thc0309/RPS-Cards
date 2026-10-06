@@ -1,7 +1,8 @@
 import React from 'react';
-import { ImageBackground, StyleSheet, Text } from 'react-native';
+import { ImageBackground, StyleSheet, Text, View } from 'react-native';
 import { FolkBoardView, FolkDraftView, FolkReconnectingView, FolkResultView, isCardCenterInsideDropTarget } from './FolkGameViews';
 import { FolkButton } from './FolkButton';
+import { getRoundPresentation } from '../game/board-round-presentation';
 import { folkAssets } from '../ui/folk-assets';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -38,7 +39,6 @@ describe('FolkResultView', () => {
     const panel = tree!.root
       .findAllByType(ImageBackground)
       .find((node: { props: { source?: unknown } }) => node.props.source === folkAssets.board.scrollPanel);
-    const panelStyle = StyleSheet.flatten(panel!.props.style);
     const scoreBanner = tree!.root.findByProps({ testID: 'result-score' });
     const firstRoundCopy = tree!.root.findByProps({ testID: 'result-round-copy-1' });
 
@@ -47,7 +47,7 @@ describe('FolkResultView', () => {
       ['Round', ' ', 1],
       'VS',
     ]);
-    expect(panelStyle).toEqual(expect.objectContaining({ minHeight: 300, paddingTop: 60, paddingBottom: 48 }));
+    expect(panel!.findAllByType(View).filter((node: { props: { testID?: string } }) => node.props.testID?.startsWith('result-round-copy-'))).toHaveLength(4);
   });
 });
 
@@ -85,6 +85,7 @@ describe('FolkBoardView', () => {
     const selectedCard = tree!.root.findAll((node: { props: { accessibilityActions?: unknown } }) => Array.isArray(node.props.accessibilityActions))[0];
     expect(StyleSheet.flatten(arena.props.style)).toEqual(expect.objectContaining({ flexDirection: 'column' }));
     expect(target).toBeDefined();
+    expect(StyleSheet.flatten(tree!.root.findByProps({ testID: 'board-player-score-column' }).props.style)).toEqual(expect.objectContaining({ width: '33.333%', alignItems: 'center' }));
     expect(heldCard.props.accessibilityLabel).toBe('ROCK');
     expect(tree!.root.findAllByType(FolkButton)).toHaveLength(0);
 
@@ -125,4 +126,21 @@ describe('FolkReconnectingView', () => {
     expect(status.props.accessibilityLiveRegion).toBe('polite');
     expect(status.props.accessibilityLabel).toContain('23s');
   });
+});
+
+test('preparation hides opponent faces and selection timer; reveal uses equal slots and non-color outcome', () => {
+  const timeline = { round: 1, revealAt: 1000, completeAt: 3100 };
+  const round = { round: 1, outcomeForA: 'WIN' as const, playerA: { cardId: 'a', kind: 'ROCK' }, playerB: { cardId: 'b', kind: 'SCISSORS' } };
+  const props = { opponentName: 'Opponent', playerName: 'You', scoreLabel: 'Available', opponentScore: 0, playerScore: 0, opponentCardCount: 4, opponentLocked: true, opponentDiscards: [], playerDiscards: [], cards: [{ id: 'a', kind: 'ROCK' as const }], selectedCardId: null, lockedCardId: 'a', canLock: false, busy: false, reducedMotion: true, lastRound: null, remaining: 0, cardBackLabel: 'Hidden', discardLabel: 'Discards', lockLabel: 'Lock', waitingLabel: 'Waiting', selectedLabel: 'Selected', cardLabel: (kind: string) => kind, selectedLift: 0, onSelect: jest.fn(), onLock: jest.fn() };
+  let tree: ReturnType<typeof create>;
+  act(() => { tree = create(<FolkBoardView {...props} presentation={getRoundPresentation('ROUND_REVEAL', 1, timeline, null, 900, 'PLAYER_A')} statusLabel="Both locked" />); });
+  expect(tree!.root.findAllByProps({ accessibilityLabel: 'SCISSORS' })).toHaveLength(0);
+  expect(tree!.root.findAllByProps({ testID: 'board-selection-timer' })).toHaveLength(0);
+  const opponent = StyleSheet.flatten(tree!.root.findByProps({ testID: 'board-opponent-slot' }).props.style);
+  const own = StyleSheet.flatten(tree!.root.findByProps({ testID: 'board-drop-target' }).props.style);
+  expect([opponent.width, opponent.height]).toEqual([own.width, own.height]);
+  act(() => { tree!.update(<FolkBoardView {...props} lockedCardId={null} presentation={getRoundPresentation('ROUND_RESULT', 1, timeline, round, 1700, 'PLAYER_A')} statusLabel="✓ You win this round" />); });
+  expect(tree!.root.findByProps({ testID: 'board-drop-target' }).props.accessibilityLabel).toBe('ROCK');
+  expect(tree!.root.findByProps({ testID: 'board-round-status' }).props.children).toBe('✓ You win this round');
+  act(() => tree!.unmount());
 });

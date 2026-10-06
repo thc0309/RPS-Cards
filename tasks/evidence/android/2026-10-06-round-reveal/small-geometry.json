@@ -1,0 +1,38 @@
+[
+  {
+    "text": "",
+    "content-desc": "",
+    "resource-id": "board-opponent-slot",
+    "bounds": "[383,413][518,616]"
+  },
+  {
+    "text": "",
+    "content-desc": "Lock card",
+    "resource-id": "board-drop-target",
+    "bounds": "[383,750][518,952]"
+  },
+  {
+    "text": "",
+    "content-desc": "",
+    "resource-id": "board-player-score-column",
+    "bounds": "[308,956][592,1152]"
+  },
+  {
+    "text": "",
+    "content-desc": "Rock",
+    "resource-id": "",
+    "bounds": "[166,1163][408,1492]"
+  },
+  {
+    "text": "",
+    "content-desc": "Paper",
+    "resource-id": "",
+    "bounds": "[340,1170][560,1485]"
+  },
+  {
+    "text": "",
+    "content-desc": "Scissors",
+    "resource-id": "",
+    "bounds": "[492,1163][734,1492]"
+  }
+]

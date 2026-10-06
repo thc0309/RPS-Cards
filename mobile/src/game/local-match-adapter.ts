@@ -1,4 +1,7 @@
 import {
+  ROUND_PREPARE_MS,
+  ROUND_PRESENTATION_MS,
+  type RoundTimeline,
   beginNextRound,
   createMatch,
   lockCard,
@@ -14,6 +17,8 @@ export const BOT_THINK_DELAY_MS = 2_000;
 
 export interface LocalMatchState {
   readonly match: MatchState;
+  readonly timeline: RoundTimeline | null;
+  readonly matchId: string;
   readonly deadline: Deadline | null;
   readonly selectedCardId: string | null;
   readonly acceptedOperations: number;
@@ -31,6 +36,9 @@ const defaultTimer: MatchTimerApi = {
 
 export class LocalMatchAdapter {
   private match: MatchState;
+  private timeline: RoundTimeline | null = null;
+  private matchId = 1;
+  private presentationTimerHandle: unknown = null;
   private deadline: Deadline | null = null;
   private selectedCardId: string | null = null;
   private deadlineTimerHandle: unknown = null;
@@ -59,7 +67,7 @@ export class LocalMatchAdapter {
   }
 
   getState(): LocalMatchState {
-    return { match: this.match, deadline: this.deadline, selectedCardId: this.selectedCardId, acceptedOperations: this.operation };
+    return { timeline: this.timeline, matchId: `local-${this.matchId}`, match: this.match, deadline: this.deadline, selectedCardId: this.selectedCardId, acceptedOperations: this.operation };
   }
 
   lockPlayerCard(cardId: string): void {
@@ -75,6 +83,8 @@ export class LocalMatchAdapter {
   rematch(): void {
     this.clearTimers();
     this.match = createMatch(this.initialHands);
+    this.timeline = null;
+    this.matchId += 1;
     this.selectedCardId = null;
     this.operation = 0;
     this.scheduleDeadline();
@@ -104,14 +114,22 @@ export class LocalMatchAdapter {
   }
 
   private resolveIfReady(): void {
-    if (this.match.phase !== 'ROUND_REVEAL') return;
-    this.match = resolveLockedRound(this.match);
-    this.selectedCardId = null;
+    if (this.match.phase !== 'ROUND_REVEAL' || this.presentationTimerHandle !== null) return;
     this.clearTimers();
-    if (this.match.phase === 'ROUND_RESULT') {
-      this.match = beginNextRound(this.match);
-      this.scheduleDeadline();
-    }
+    const revealAt = this.now() + ROUND_PREPARE_MS;
+    this.timeline = { round: this.match.round, revealAt, completeAt: revealAt + ROUND_PRESENTATION_MS };
+    this.presentationTimerHandle = this.timer.setTimeout(() => {
+      this.presentationTimerHandle = null;
+      this.match = resolveLockedRound(this.match);
+      this.selectedCardId = null;
+      this.presentationTimerHandle = this.timer.setTimeout(() => {
+        this.presentationTimerHandle = null;
+        this.match = beginNextRound(this.match);
+        this.scheduleDeadline();
+        this.emit();
+      }, Math.max(0, this.timeline!.completeAt - this.now()));
+      this.emit();
+    }, ROUND_PREPARE_MS);
     this.emit();
   }
 
@@ -140,6 +158,8 @@ export class LocalMatchAdapter {
   private clearTimers(): void {
     if (this.deadlineTimerHandle !== null) this.timer.clearTimeout(this.deadlineTimerHandle);
     if (this.botTimerHandle !== null) this.timer.clearTimeout(this.botTimerHandle);
+    if (this.presentationTimerHandle !== null) this.timer.clearTimeout(this.presentationTimerHandle);
+    this.presentationTimerHandle = null;
     this.deadlineTimerHandle = null;
     this.botTimerHandle = null;
     this.deadline = null;

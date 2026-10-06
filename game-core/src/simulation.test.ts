@@ -47,7 +47,8 @@ function playIds(state: ReturnType<typeof createMatch>, idsA: readonly string[],
   let next = state;
   for (let round = 0; round < 4; round += 1) {
     next = resolveLockedRound(lockCard(lockCard(next, 'PLAYER_A', idsA[round]!), 'PLAYER_B', idsB[round]!));
-    if (round < 3) next = beginNextRound(next);
+    assert.equal(next.phase, 'ROUND_RESULT');
+    next = beginNextRound(next);
   }
   return next;
 }

@@ -92,6 +92,10 @@ describe('match state', () => {
     state = beginNextRound(state);
     state = playRound(state, 'a4', 'b4');
 
+    assert.equal(state.phase, 'ROUND_RESULT');
+    assert.equal(state.result, null);
+    expectCode(() => resolveLockedRound(state), 'ROUND_NOT_READY');
+    state = beginNextRound(state);
     assert.equal(state.phase, 'MATCH_RESULT');
     assert.equal(state.round, 4);
     assert.deepEqual(state.result, { winner: 'PLAYER_A', scores: { PLAYER_A: 4, PLAYER_B: 0 } });

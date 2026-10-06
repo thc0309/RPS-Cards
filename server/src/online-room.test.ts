@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ProtocolError, resolveRound } from '@rps-cards/game-core';
+import { ROUND_PREPARE_MS, ROUND_PRESENTATION_MS, ProtocolError, resolveRound } from '@rps-cards/game-core';
 import { OnlineRoomController, type OnlineTimerApi } from './rooms/online-room.js';
 
 class FakeTimer implements OnlineTimerApi {
+  now = 1000;
   callback: (() => void) | null = null;
   delayMs: number | null = null;
   setTimeout(callback: () => void, delayMs: number): unknown { this.callback = callback; this.delayMs = delayMs; return callback; }
   clearTimeout(): void { this.callback = null; }
-  fire(): void { const callback = this.callback; this.callback = null; callback?.(); }
+  fire(): void { const callback = this.callback; this.callback = null; this.now += this.delayMs ?? 0; callback?.(); }
 }
 
 function pick(operationId: string, phase: 'DRAFT_PLAYER_A' | 'DRAFT_PLAYER_B', position: number) {
@@ -17,7 +18,7 @@ function pick(operationId: string, phase: 'DRAFT_PLAYER_A' | 'DRAFT_PLAYER_B', p
 
 test('online draft uses separate validated turns and never leaks the opponent pick', () => {
   const timer = new FakeTimer();
-  const room = new OnlineRoomController('ABCD2', { randomInt: () => 0, timer, now: () => 1_000 });
+  const room = new OnlineRoomController('ABCD2', { randomInt: () => 0, timer, now: () => timer.now });
   room.join('a');
   room.join('b');
   const first = room.projection('a');
@@ -76,13 +77,13 @@ test('idempotency cache is scoped per session and clears on rematch', () => {
   assert.notEqual(fromA.own.lockedCardId, fromB.own.lockedCardId);
   assert.equal(fromA.own.lockedCardId, cardA);
   assert.equal(fromB.own.lockedCardId, cardB);
-  assert.equal(room.idempotencySize, 2);
+  assert.equal(room.idempotencySize, 4);
   room.dispose();
 });
 
 test('online lock is replaceable, private, deadline-stable, and idempotent until reveal', () => {
   const timer = new FakeTimer();
-  const room = new OnlineRoomController('ABCD2', { randomInt: () => 0, timer, now: () => 1_000 });
+  const room = new OnlineRoomController('ABCD2', { randomInt: () => 0, timer, now: () => timer.now });
   room.join('a');
   room.join('b');
   const first = room.projection('a');
@@ -121,8 +122,17 @@ test('online lock is replaceable, private, deadline-stable, and idempotent until
 
   const restored = room.handle('a', lock('lock-a-restore', cardA));
   assert.equal(restored.own.lockedCardId, cardA);
-  const result = room.handle('b', lock('lock-b', cardB));
+  const preparing = room.handle('b', lock('lock-b', cardB));
+  assert.equal(preparing.phase, 'ROUND_REVEAL');
+  assert.equal(preparing.lastRound, null);
+  assert.equal(preparing.deadlineAt, undefined);
+  assert.deepEqual(preparing.players.map((player) => player.score), [0, 0]);
+  assert.equal(timer.delayMs, ROUND_PREPARE_MS);
+  timer.fire();
+  const result = room.projection('b');
+  assert.equal(result.phase, 'ROUND_RESULT');
   assert.equal(result.lastRound?.round, 1);
+  assert.equal(timer.delayMs, ROUND_PRESENTATION_MS);
   assert.deepEqual(result.players.map((player) => player.discards.length), [1, 1]);
   assert.deepEqual(room.handle('b', lock('lock-b', cardB)), result);
   assert.throws(() => room.handle('b', { ...lock('lock-b', cardB), payload: { cardId: 'different' } }), (error: unknown) => error instanceof ProtocolError && error.code === 'OPERATION_CONFLICT');
@@ -131,7 +141,8 @@ test('online lock is replaceable, private, deadline-stable, and idempotent until
 });
 
 test('four authoritative rounds finish once and rematch waits for both seats', () => {
-  const room = new OnlineRoomController('ABCD2', { randomInt: () => 0 });
+  const timer = new FakeTimer();
+  const room = new OnlineRoomController('ABCD2', { randomInt: () => 0, timer, now: () => timer.now });
   room.join('a');
   room.join('b');
   const pickDraft = (session: 'a' | 'b', operationId: string) => {
@@ -149,8 +160,11 @@ test('four authoritative rounds finish once and rematch waits for both seats', (
     const cardB = b.own.hand.find((card) => !card.used && resolveRound(cardA.kind as 'ROCK' | 'PAPER' | 'SCISSORS', card.kind as 'ROCK' | 'PAPER' | 'SCISSORS') === 'WIN') ?? b.own.hand.find((card) => !card.used)!;
     room.handle('a', { type: 'LOCK_CARD', operationId: `a-${round}`, expectedPhase: 'ROUND_SELECTION', expectedRound: round, payload: { cardId: cardA.id } });
     const after = room.handle('b', { type: 'LOCK_CARD', operationId: `b-${round}`, expectedPhase: 'ROUND_SELECTION', expectedRound: round, payload: { cardId: cardB.id } });
-    if (round < 4) assert.equal(after.phase, 'ROUND_SELECTION');
-    else assert.equal(after.phase, 'MATCH_RESULT');
+    assert.equal(after.phase, 'ROUND_REVEAL');
+    timer.fire();
+    assert.equal(room.projection('a').phase, 'ROUND_RESULT');
+    timer.fire();
+    assert.equal(room.projection('a').phase, round < 4 ? 'ROUND_SELECTION' : 'MATCH_RESULT');
   }
   const result = room.projection('a');
   assert.equal(result.result?.winner, 'PLAYER_A');
@@ -159,6 +173,9 @@ test('four authoritative rounds finish once and rematch waits for both seats', (
   assert.deepEqual(readyA.rematchReady, ['PLAYER_A']);
   const readyB = room.handle('b', { type: 'REMATCH_READY', operationId: 'ready-b', expectedPhase: 'MATCH_RESULT', expectedRound: 4, payload: { ready: true } });
   assert.ok(readyB.phase === 'DRAFT_PLAYER_A' || readyB.phase === 'DRAFT_PLAYER_B');
+  assert.notEqual(readyB.matchId, result.matchId);
+  assert.ok(readyB.revision! > result.revision!);
+  assert.equal(readyB.timeline, null);
   room.dispose();
 });
 
@@ -272,4 +289,41 @@ test('explicit leave closes the room and awards the connected opponent once', ()
     (error: unknown) => error instanceof ProtocolError && error.code === 'ROOM_EXPIRED',
   );
   room.dispose();
+});
+
+test('prepare/result cleanup cancels stale callbacks and late timer catches up on the same timeline', () => {
+  for (const phase of ['prepare', 'result', 'late'] as const) {
+    const timer = new FakeTimer();
+    const room = new OnlineRoomController('ABCD2', { randomInt: () => 0, timer, now: () => timer.now });
+    room.join('a'); room.join('b');
+    timer.fire(); timer.fire();
+    const a = room.projection('a'); const b = room.projection('b');
+    const lock = (id: string) => ({ type: 'LOCK_CARD', operationId: id, expectedPhase: 'ROUND_SELECTION', expectedRound: 1, payload: { cardId: id } } as const);
+    room.handle('a', lock(a.own.hand[0]!.id));
+    const before = room.handle('b', lock(b.own.hand[0]!.id));
+    assert.equal(before.phase, 'ROUND_REVEAL');
+    const revision = before.revision!;
+    if (phase === 'late') {
+      timer.now = before.timeline!.completeAt;
+      timer.fire();
+      assert.equal(timer.delayMs, 0);
+      timer.fire();
+      const after = room.projection('a');
+      assert.equal(after.phase, 'ROUND_SELECTION');
+      assert.equal(after.round, 2);
+      assert.ok(after.revision! > revision);
+      assert.equal(after.deadlineAt, timer.now + 15_000);
+      assert.equal(after.timeline?.round, 1);
+      room.dispose();
+    } else {
+      if (phase === 'result') timer.fire();
+      room.leave('a');
+      assert.equal(room.projection('b').timeline, null);
+      timer.fire();
+      assert.equal(room.projection('b').phase, 'MATCH_RESULT');
+      assert.equal(room.projection('b').result?.winner, 'PLAYER_B');
+      room.dispose();
+      assert.equal(timer.callback, null);
+    }
+  }
 });

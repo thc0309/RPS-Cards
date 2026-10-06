@@ -1,5 +1,5 @@
 import { ProtocolError } from './errors.js';
-import { RULESET_VERSION, type RulesetVersion } from './types.js';
+import { RULESET_VERSION, type RulesetVersion, type RoundOutcome } from './types.js';
 
 export type ClientAction =
   | { readonly type: 'DRAFT_PICK'; readonly operationId: string; readonly expectedPhase: 'DRAFT_PLAYER_A' | 'DRAFT_PLAYER_B'; readonly expectedRound: 0; readonly payload: { readonly position: number } }
@@ -32,6 +32,18 @@ export interface PrivatePlayerProjection extends PublicPlayerProjection {
   readonly lockedCardId: string | null;
 }
 
+export const ROUND_PREPARE_MS = 800;
+export const ROUND_FLIP_MS = 600;
+export const ROUND_OUTCOME_MS = 1_200;
+export const ROUND_DISCARD_MS = 300;
+export const ROUND_PRESENTATION_MS = ROUND_FLIP_MS + ROUND_OUTCOME_MS + ROUND_DISCARD_MS;
+
+export interface RoundTimeline {
+  readonly round: number;
+  readonly revealAt: number;
+  readonly completeAt: number;
+}
+
 export interface RoomProjection {
   readonly rulesetVersion: RulesetVersion;
   readonly roomCode: string;
@@ -39,8 +51,12 @@ export interface RoomProjection {
   readonly round: number;
   readonly players: readonly PublicPlayerProjection[];
   readonly own: PrivatePlayerProjection;
+  readonly matchId?: string;
+  readonly revision?: number;
+  readonly serverNow?: number;
+  readonly timeline?: RoundTimeline | null;
   readonly deadlineAt?: number;
-  readonly lastRound?: { readonly round: number; readonly playerA: { readonly cardId: string; readonly kind: string }; readonly playerB: { readonly cardId: string; readonly kind: string } } | null;
+  readonly lastRound?: { readonly outcomeForA: RoundOutcome; readonly round: number; readonly playerA: { readonly cardId: string; readonly kind: string }; readonly playerB: { readonly cardId: string; readonly kind: string } } | null;
   readonly result?: { readonly winner: 'PLAYER_A' | 'PLAYER_B'; readonly scores: Readonly<Record<'PLAYER_A' | 'PLAYER_B', number>> } | null;
   readonly rematchReady?: readonly ('PLAYER_A' | 'PLAYER_B')[];
 }

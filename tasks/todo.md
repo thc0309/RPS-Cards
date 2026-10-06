@@ -2,7 +2,7 @@
 
 Status: T01–T12 complete; Android remediation/evidence is active; iOS validation deferred
 
-Chi tiết của mỗi task nằm trong `tasks/detail-tasks/`. Chỉ đánh dấu hoàn tất sau
+Chi tiết của mỗi task nằm trong `tasks/detail-tasks/`; T26 nằm trong [kế hoạch sân đấu](plan.md#t26-round-flow). Chỉ đánh dấu hoàn tất sau
 khi acceptance criteria và verification trong file tương ứng đã có evidence.
 
 ## Phase A — Foundation and deterministic core
@@ -36,6 +36,8 @@ khi acceptance criteria và verification trong file tương ứng đã có evide
 
 ## Phase E — UI-reference fidelity remediation
 
+- [x] [UI-01–UI-12 — sửa hình học UI sau card refresh](evidence/android/2026-10-06-ui-fixes/REPORT.md) — mobile 48 tests/typecheck/lint PASS; Samsung SM-S906E mặc định + 320×568 dp/font 1.3, vi/en và keyboard/drag smoke đã kiểm tra. Không đóng các gate T13/T14/T21/T22.
+
 - [x] [T13-R — Lifecycle and shared layout root fix] — removed duplicate root SafeArea wrapper, made FolkSurface own explicit insets; mobile tests/typecheck/lint pass. Native cold-launch recheck remains part of T24-C.
 - [ ] Checkpoint E0 recorded in `tasks/plan.md`
 - [x] [T15 — Folk foundation and Home](detail-tasks/T15-folk-foundation-home.md) — focused Home contract PASS; Android build/install and Home render PASS on Samsung SM-X210; clean final screenshot remains in T22.
@@ -55,6 +57,24 @@ khi acceptance criteria và verification trong file tương ứng đã có evide
 - [ ] [T25 — Motion accessibility and performance](detail-tasks/T25-motion-accessibility-performance.md)
 - [ ] [T22 — UI visual evidence matrix](detail-tasks/T22-ui-visual-evidence.md) — close the Android vi/en, small-screen, TalkBack, reduced-motion and FPS matrix first
 - [ ] Checkpoint E3 recorded in `tasks/plan.md`
+
+## T26 — Chuẩn bị, lật bài hai bên và kết quả lượt (planned 2026-10-06)
+
+Chi tiết/acceptance/verification: [T26](plan.md#t26-round-flow).
+Chưa triển khai, chưa có runtime evidence mới. T26 cần xong trước T22/T14;
+không thay thế các gate còn mở của T25.
+
+- [ ] T26-A — Contract vòng chơi và lượt 4 qua ROUND_RESULT
+- [ ] T26-B — BOT giữ đủ nhịp chuẩn bị/result trước lượt mới
+- [ ] CP26-1 — Contract và BOT
+- [ ] T26-C — Online authority: timer, privacy, revision, outcome
+- [ ] T26-D — Board online: nhận snapshot đúng thứ tự, dùng chung timeline
+- [ ] CP26-2 — Hai seat đồng bộ và không lộ bài
+- [ ] T26-E — Lật đồng thời, banner thắng/thua/hòa, thu bài
+- [ ] T26-F — Background/reconnect, TalkBack, Reduced Motion
+- [ ] CP26-3 — Motion và recovery
+- [ ] T26-G — Android video, geometry và performance evidence
+- [ ] CP26-4 — Cập nhật T25/T22/T14 theo bằng chứng thực tế
 
 ## Phase F — Android final evidence (current milestone)
 
