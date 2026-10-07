@@ -175,3 +175,44 @@ Detailed findings and screenshots: [UI-REVIEW.md](evidence/android/2026-10-06-ca
 - Native: Samsung SM-S906E / RFCTB15AQ6J / Android 16, Expo development build arm64-v8a, Gradle assembleDebug/install PASS. Metro được restart sau các lần sửa. Default 1080×2340/font 1.0 và override 900×1598/font 1.3 trên cùng máy; vi/en Home/Rooms/Draft, bàn phím, cuộn, initial drag và replacement smoke. Không coi debug + Metro là release/offline APK.
 - Ảnh trước được giữ nguyên; đối chiếu từng mục và giới hạn tại [UI fixes REPORT](evidence/android/2026-10-06-ui-fixes/REPORT.md).
 - Không chạy lại root verify; server lint/test baseline từ review 05/10 không được sửa. Online hai máy, Lobby/Reconnecting native, TalkBack, Reduced Motion/FPS và iOS vẫn ngoài bằng chứng này; không đóng T13/T14/T21/T22/T25.
+
+
+## 2026-10-06–07 — T26 round flow implementation and Android evidence
+
+A–F code implemented at current HEAD `b1c3400`; 07/10 follow-up changes docs/evidence
+only. Core13/server27/mobile56 tests (23 mobile suites), whole typecheck, mobile lint
+and server build PASS. Root independently: impacted mobile17 tests/4 suites and whole
+typecheck PASS. `verify` blocked only by baseline server unused `guest` lint at
+`room-entry.test.ts:37`; no baseline fix or new commit.
+
+Samsung SM-S906E/RFCTB15AQ6J, Android 16/API36, density450. Default vi debug BOT and
+one-phone online+scripted peer videos show four rounds including WIN/LOSS/DRAW.
+Final-geometry release BOT at320×568dp/en/font1.3 reaches four-row Result;07/10
+360×800dp/en/font1.3 release Reduced Motion smoke completes without hanging.
+TalkBack enabled/tree/focus spot-check captured; accessible lock/once-only speech
+are unverified. A controlled toggle during the revealing-status interval completes without hanging; exact frame-boundary alignment is not certified. Settings restored after run.
+
+| Case | Status |
+|---|---|
+| MOB-REVEAL-001 | PARTIAL — observed BOT pipeline PASS, physical edge matrix pending |
+| MOB-REVEAL-002 | BLOCKED — second physical Android unavailable |
+| MOB-REVEAL-003/004 | PASS automated, PARTIAL native |
+| MOB-REVEAL-005/006/007 | PARTIAL — scoped recovery/geometry/reduced-motion/TalkBack smoke |
+| MOB-REVEAL-008 | PARTIAL — release 541 frames, 30 janky (5.55%); p90=21ms/p95=25ms; not60fps certification |
+
+Full case matrix, command/runtime provenance, frame seek index, rawtrace limits and
+cleanup: [T26 REPORT](evidence/android/2026-10-06-round-reveal/REPORT.md).
+T26-F/G and CP26-3/4, T25/T22/T14 remain open; iOS/VoiceOver deferred.
+
+## 2026-10-07 — T27 BOT rematch returns to Draft
+
+Result previously called `adapter.rematch()` and opened `/board`, retaining the
+previous drafted hands. It now disposes the finished local session and opens
+`/draft`, which creates a fresh selection flow. Online already starts a fresh
+draft after both players consent and routes there with the same room/session.
+
+New Result regression failed before the fix (`/board` instead of `/draft`), then
+passed with session/draft cleanup, adapter disposal and no pending timers.
+Focused Result/local-match/local-draft: 8 tests/3 suites PASS; mobile typecheck,
+ESLint on the two touched source/test files and diff whitespace check PASS.
+No native rerun, new build or commit for this change; Android gates stay open.

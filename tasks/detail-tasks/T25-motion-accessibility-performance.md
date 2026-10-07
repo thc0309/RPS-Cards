@@ -52,3 +52,12 @@ iOS/VoiceOver/FPS remains deferred, not PASS.
 
 Continuous ambient background animation, Lottie, haptics, custom JS screen
 transitions and Skia unless a measured T25 bottleneck proves a bounded need.
+
+
+### T26 evidence contribution — 06–07/10/2026
+
+[Round reveal REPORT](../evidence/android/2026-10-06-round-reveal/REPORT.md):
+BOT and one-phone online video, release small-viewport/reduced-motion completion,
+TalkBack tree/focus smoke and measured release gfxinfo recorded. Two physical
+Android, complete native recovery/a11y/geometry and release stress/FPS validation
+remain PARTIAL/BLOCKED. This contribution does not close this task's broad gate.

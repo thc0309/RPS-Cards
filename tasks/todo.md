@@ -58,25 +58,28 @@ khi acceptance criteria và verification trong file tương ứng đã có evide
 - [ ] [T22 — UI visual evidence matrix](detail-tasks/T22-ui-visual-evidence.md) — close the Android vi/en, small-screen, TalkBack, reduced-motion and FPS matrix first
 - [ ] Checkpoint E3 recorded in `tasks/plan.md`
 
-## T26 — Chuẩn bị, lật bài hai bên và kết quả lượt (planned 2026-10-06)
+## T26 — Chuẩn bị, lật bài hai bên và kết quả lượt (implemented 2026-10-06; evidence follow-up 2026-10-07)
 
 Chi tiết/acceptance/verification: [T26](plan.md#t26-round-flow).
-Chưa triển khai, chưa có runtime evidence mới. T26 cần xong trước T22/T14;
-không thay thế các gate còn mở của T25.
+Code A–F đã triển khai; automated checks và video BOT/online một Android đã có.
+[Báo cáo T26](evidence/android/2026-10-06-round-reveal/REPORT.md) ghi rõ gate còn mở;
+T26 chưa hoàn tất toàn bộ native acceptance và không đóng T25/T22/T14.
 
-- [ ] T26-A — Contract vòng chơi và lượt 4 qua ROUND_RESULT
-- [ ] T26-B — BOT giữ đủ nhịp chuẩn bị/result trước lượt mới
-- [ ] CP26-1 — Contract và BOT
-- [ ] T26-C — Online authority: timer, privacy, revision, outcome
-- [ ] T26-D — Board online: nhận snapshot đúng thứ tự, dùng chung timeline
-- [ ] CP26-2 — Hai seat đồng bộ và không lộ bài
-- [ ] T26-E — Lật đồng thời, banner thắng/thua/hòa, thu bài
-- [ ] T26-F — Background/reconnect, TalkBack, Reduced Motion
-- [ ] CP26-3 — Motion và recovery
-- [ ] T26-G — Android video, geometry và performance evidence
-- [ ] CP26-4 — Cập nhật T25/T22/T14 theo bằng chứng thực tế
+- [x] T26-A — Contract vòng chơi và lượt 4 qua ROUND_RESULT — core 13 tests, 864 exhaustive + 10,000 simulations PASS
+- [x] T26-B — BOT giữ đủ nhịp chuẩn bị/result trước lượt mới — fake clock/cleanup và native four-round PASS scoped
+- [x] CP26-1 — Contract và BOT — automated PASS
+- [x] T26-C — Online authority: timer, privacy, revision, outcome — server 27 tests PASS
+- [x] T26-D — Board online: nhận snapshot đúng thứ tự, dùng chung timeline — stale response/background/busy ownership tests PASS
+- [x] CP26-2 — Hai seat đồng bộ và không lộ bài — two-seat automated PASS; hai Android vẫn BLOCKED
+- [x] T26-E — Lật đồng thời, banner thắng/thua/hòa, thu bài — implementation + BOT/one-phone online video; không đại diện full matrix
+- [ ] T26-F — Code recovery/accessibility đã triển khai; TalkBack action/once-only announcement và full recovery matrix còn PARTIAL
+- [ ] CP26-3 — Motion và recovery — video có; accessibility/recovery native acceptance chưa đầy đủ
+- [ ] T26-G — Android evidence đã thu và báo cáo; hai máy/full geometry/performance stress matrix còn PARTIAL/BLOCKED
+- [ ] CP26-4 — T25/T22/T14 đã liên kết evidence thực chạy; broad gates chưa đóng
 
 ## Phase F — Android final evidence (current milestone)
+
+- [x] T27 — Đấu lại BOT quay về chọn bài mới — xóa phiên/bộ bài cũ, mở `/draft`; regression 8 tests/3 suites, mobile typecheck và lint hai file PASS (07/10). Native recheck chưa chạy cho thay đổi này.
 
 - [ ] [T14 — Native E2E final gate](detail-tasks/T14-native-e2e-final-gate.md) — chạy Android gate sau T22; iOS cases deferred and keep the full cross-platform task open
 - [ ] Checkpoint F recorded in `tasks/plan.md`

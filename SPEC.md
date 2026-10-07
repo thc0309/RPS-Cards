@@ -275,7 +275,8 @@ values in an image are internally inconsistent; no sample value is hard-coded.
 
 #### Result actions
 
-- In bot mode, **Đấu lại** starts a fresh local match immediately.
+- In bot mode, **Đấu lại** clears the finished session and returns immediately
+  to Draft to choose new cards before starting the next match.
 - In online mode, **Đấu lại** marks that player ready in the same room and waits
   for the opponent. A fresh draft starts only after both players consent; either
   player may cancel and return to Rooms.

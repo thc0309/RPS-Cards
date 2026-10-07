@@ -2,6 +2,12 @@
 
 Status: T01–T12 complete; Android remediation/evidence active; iOS validation deferred
 
+## T27 — Đấu lại quay về chọn bài (2026-10-07)
+
+- BOT: Result gọi `disposeLocalSession()` rồi replace `/draft`; Draft hiện có tạo lượt chọn mới và adapter mới, không tái dùng bộ bài cũ.
+- Online: contract hiện có đợi cả hai `REMATCH_READY` rồi `startDraft()`; Result chuyển `/draft` cùng room/session khi nhận pha draft.
+- Verification: test Result mới đã tái hiện lỗi `/board` trước sửa; sau sửa 8 tests/3 suites Result/local match/local draft PASS, mobile typecheck và lint hai file PASS. Chưa chạy lại native cho thay đổi này; không đóng các gate Android còn mở.
+
 Current execution order is Android-only through T13-R, T15–T25, T26 (round reveal), T22 and the Android
 portion of T14. iOS remains required for the later cross-platform release gate,
 but it does not block completion of the current Android milestone.
@@ -351,12 +357,12 @@ Completed UI-01–UI-12 from the Android report: bounded bitmaps, separate decor
 
 ## T26 — Nhịp sân đấu và lật bài hai bên
 
-Ngày: 2026-10-06. **PLANNED — chưa triển khai, chưa chạy kiểm thử mới.**
+Ngày kế hoạch: 2026-10-06. **A–F đã triển khai; evidence 06–07/10/2026, native acceptance còn PARTIAL/BLOCKED.**
 Phạm vi: kiểm tra sân đấu và thiết kế trọn luồng chọn → chốt → chờ → chuẩn bị
 → lật đồng thời → thắng/thua/hòa → thu bài → lượt tiếp theo/kết quả trận.
 Giữ bộ ảnh dễ thương không khuôn mặt, luật bốn lượt và thao tác drag-to-lock.
 
-### Kết quả kiểm tra hiện trạng
+### Kết quả kiểm tra trước triển khai (06/10/2026)
 
 | Nguồn đã đọc | Khoảng trống cần xử lý |
 |---|---|
@@ -510,3 +516,31 @@ yêu cầu triển khai toàn bộ. Kế hoạch này không tự cấp trạng 
   và tất cả caller phải được cập nhật cùng slice; không vá bằng delay router.
 - Không có câu hỏi chặn lập kế hoạch. Mặc định “chốt” là drag-to-lock hiện tại,
   “hai bên” là hai slot trên cùng sân đấu và kết quả phản chiếu theo người xem.
+
+
+### T26 — Execution record (2026-10-06; follow-up 2026-10-07)
+
+Source hiện tại đã chứa implementation tại HEAD `b1c3400`; lượt follow-up 07/10
+chỉ bổ sung/sửa nhãn evidence và ledger, không sửa product code hoặc tạo commit.
+[REPORT](evidence/android/2026-10-06-round-reveal/REPORT.md) là nguồn trạng thái chi tiết.
+
+| Task/checkpoint | Trạng thái thực tế |
+|---|---|
+| A/B, CP26-1 | PASS automated: core contract, local authority pipeline/timer cleanup; BOT video đủ bốn lượt. |
+| C/D, CP26-2 | PASS automated: hai-seat privacy/revision/idempotency/final round; poll/action/resume ingress và lifecycle ownership. Native chỉ một Android + scripted peer, không phải hai thiết bị. |
+| E | Implemented; video debug BOT/online và release BOT nhỏ có các pha và outcome. Hai slot cùng tiến độ; score header ba cột bằng nhau. |
+| F, CP26-3 | Implemented; lifecycle unit tests và một native online round3-selection resume smoke. Reduced Motion release smoke có; TalkBack enabled/tree spot-check có, nhưng accessible lock/once-only speech và full reconnect/toggle matrix chưa được xác nhận. Giữ checkpoint mở. |
+| G, CP26-4 | Evidence/report executed, matrix PARTIAL; hai Android BLOCKED, performance stress và full a11y/geometry còn mở. T25/T22/T14 không đóng. |
+
+Final verification 07/10: core 13/server 27/mobile 56 tests (23 mobile suites)
+PASS; whole typecheck PASS, mobile lint PASS, server build PASS, diff --check PASS.
+`verify` dừng tại baseline server lint `room-entry.test.ts:37` unused `guest`;
+không có regression test/typecheck được quan sát và không sửa baseline ngoài scope.
+Root independently reran four impacted mobile suites (17 tests) + whole typecheck PASS.
+
+Minimal deviations: metadata timeline/matchId/revision/serverNow additive optional
+để payload cũ rơi về trình bày tĩnh an toàn; `lastRound.outcomeForA` là contract reveal.
+ReconnectingScreen giữ nguyên vì routing đã xử lý các pha này. Retry lưu fingerprint
+rồi trả projection mới, không giữ timestamp/projection cache cũ. Timing giữ nguyên
+800/600/1200/300ms; fake clocks xác minh authority, video không được dùng làm chuẩn
+FPS hoặc khẳng định chính xác từng frame giữa hai thiết bị.
