@@ -144,3 +144,29 @@ test('preparation hides opponent faces and selection timer; reveal uses equal sl
   expect(tree!.root.findByProps({ testID: 'board-round-status' }).props.children).toBe('✓ You win this round');
   act(() => tree!.unmount());
 });
+
+test('petals mark only the revealed winner and disappear for reduced motion, draw and the next selection', () => {
+  const timeline = { round: 1, revealAt: 1000, completeAt: 3100 };
+  const round = { round: 1, outcomeForA: 'WIN' as const, playerA: { cardId: 'a', kind: 'ROCK' }, playerB: { cardId: 'b', kind: 'SCISSORS' } };
+  const props = { opponentName: 'Opponent', playerName: 'You', scoreLabel: 'Score', opponentScore: 0, playerScore: 1, opponentCardCount: 4, opponentLocked: true, opponentDiscards: [], playerDiscards: [], cards: [], selectedCardId: null, lockedCardId: null, canLock: false, busy: false, reducedMotion: false, lastRound: null, remaining: 0, cardBackLabel: 'Hidden', discardLabel: 'Discards', lockLabel: 'Lock', waitingLabel: 'Waiting', selectedLabel: 'Selected', cardLabel: (kind: string) => kind, selectedLift: 0, onSelect: jest.fn(), onLock: jest.fn() };
+  let tree: ReturnType<typeof create>;
+  const render = (now: number, outcomeForA: 'WIN' | 'LOSS' | 'DRAW' = 'WIN', reducedMotion = false) => <FolkBoardView {...props} reducedMotion={reducedMotion} presentation={getRoundPresentation('ROUND_RESULT', 1, timeline, { ...round, outcomeForA }, now, 'PLAYER_A')} statusLabel={outcomeForA} />;
+  act(() => { tree = create(render(1200)); });
+  expect(tree!.root.findAllByProps({ testID: 'round-win-petals' })).toHaveLength(0);
+  act(() => tree!.update(render(1700)));
+  const own = tree!.root.findByProps({ testID: 'board-drop-target' });
+  expect(own.findByProps({ testID: 'round-win-petals' }).props).toMatchObject({ pointerEvents: 'none', accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' });
+  expect(tree!.root.findByProps({ testID: 'board-opponent-slot' }).findAllByProps({ testID: 'round-win-petals' })).toHaveLength(0);
+  act(() => tree!.update(render(1800, 'WIN', true)));
+  expect(tree!.root.findAllByProps({ testID: 'round-win-petals' })).toHaveLength(0);
+  expect(StyleSheet.flatten(own.findByProps({ testID: 'round-winner-outline' }).props.style).borderColor).toBe('#E3B64B');
+  act(() => tree!.update(render(1900, 'LOSS')));
+  expect(tree!.root.findByProps({ testID: 'board-opponent-slot' }).findByProps({ testID: 'round-win-petals' })).toBeDefined();
+  expect(own.findAllByProps({ testID: 'round-win-petals' })).toHaveLength(0);
+  act(() => tree!.update(render(2000, 'DRAW')));
+  expect(tree!.root.findAllByProps({ testID: 'round-winner-outline' })).toHaveLength(0);
+  expect(tree!.root.findAllByProps({ testID: 'round-win-petals' })).toHaveLength(0);
+  act(() => tree!.update(<FolkBoardView {...props} presentation={getRoundPresentation('ROUND_SELECTION', 2, timeline, round, 3200, 'PLAYER_A')} />));
+  expect(tree!.root.findAllByProps({ testID: 'round-win-petals' })).toHaveLength(0);
+  act(() => tree!.unmount());
+});

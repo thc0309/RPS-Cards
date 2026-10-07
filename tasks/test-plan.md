@@ -41,6 +41,14 @@ when authority accepts both locks: prepare 800ms → flip 600ms → outcome 1200
 | MOB-REVEAL-007 | Android TalkBack and Reduced Motion; vi/en | Lock via accessibility action; complete normal/draw/final rounds; toggle reduced motion during flip; repeat/receive duplicate snapshot. | Same rules/outcome, meaningful locked/preparing/outcome text; no hidden opponent face in accessibility tree. Result announced once per round without stealing focus; no dependence on color or motion, no stuck frame after toggle. | PARTIAL — reduced-motion release completion + TalkBack tree/focus smoke; reveal-interval toggle observed; action/speech unverified |
 | MOB-REVEAL-008 | Android profile/release build | Record complete four-round BOT and online matches, rapid replacement, ten rematches and leaving during animation; collect frame trace. | Reanimated drives two flips from one progress; no JS per-frame loop. Target near 60fps with measured frame drops reported; no growing timer/listener count or post-unmount navigation. Reduced Motion has equivalent state and result. | PARTIAL — release BOT/gfxinfo/rawtrace;60fps/online release/ten-rematch stress unverified |
 
+## T28 — Outcome feedback (07/10/2026)
+
+| Case ID | Steps | Expected result | Evidence |
+|---|---|---|---|
+| MOB-OUTCOME-001 | Observe WIN/LOSS/DRAW after both cards reveal; feed a late/duplicate snapshot. | Winner bounce/gold/petals, losing tilt, shared draw pulse only in1200ms outcome; catch up to authority, no replay/extension or hidden-card decoration. | PASS automated; native default WIN/DRAW + opposite-card LOSS, small WIN scoped. [REPORT](evidence/android/2026-10-07-outcome-effects/REPORT.md) |
+| MOB-OUTCOME-002 | Release320×568dp/font1.3, normal then Reduced Motion from cold start. | Cards/status/footer readable; reduced motion keeps static winner outline/text without petals; outcome advances to next selection. | PASS scoped on Samsung, final compact normal/reduced one WIN each; full matrix remains open. |
+| MOB-OUTCOME-003 | Complete BOT four-round Result, tap Đấu lại. | Clear old hands/results and open fresh three-back Draft with a new5s timer. | PASS automated and native default release; small/iOS/online-rematch matrix not re-certified. |
+
 ## Preferences, localization, and local persistence
 
 | Case ID | Device / Preconditions | Steps | Expected result | Evidence |

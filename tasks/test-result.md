@@ -216,3 +216,24 @@ passed with session/draft cleanup, adapter disposal and no pending timers.
 Focused Result/local-match/local-draft: 8 tests/3 suites PASS; mobile typecheck,
 ESLint on the two touched source/test files and diff whitespace check PASS.
 No native rerun, new build or commit for this change; Android gates stay open.
+
+## 2026-10-07 — T28 outcome effects and T27 native rematch
+
+Shared BOT/online Board uses the existing 1200ms outcome interval for winner
+bounce/gold outline/lotus petals, losing-card tilt and a matched draw pulse.
+Reduced Motion removes the movement and petals while keeping outline/text.
+Native font1.3 revealed footer clipping; compact score/header/hand spacing and
+card ratio were corrected, then the final release was rebuilt and retested.
+
+Final mobile59 tests/24 suites, mobile typecheck, changed-file ESLint and diff
+check PASS. Release arm64 build45s, final compact rebuild19s/install PASS, no
+DEBUGGABLE flag; cold BOT works without Metro. Default four rounds1–0 and small
+four rounds4–0 captured before final compact change. Final320dp/font1.3 normal
+and Reduced Motion each complete one WIN to next selection, with footer visible.
+Default Result → Đấu lại → fresh three-back Draft/timer5s proves T27 natively.
+
+[T28 REPORT](evidence/android/2026-10-07-outcome-effects/REPORT.md) records exact
+artifact scope, automation attempts, video samples and restored device settings.
+Previous work committed as `7e473cb`; effects/evidence committed separately.
+No new native online, two-device, TalkBack or FPS certification; T26/T25/T22/T14
+broad gates remain open. Existing server lint baseline unchanged.

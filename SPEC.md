@@ -380,6 +380,12 @@ new scores and opponent cards are public only at reveal. Online snapshots carry
 match identity, increasing room revision, response server time and round timeline.
 Clients discard older revisions, catch up late timelines and resync on resume.
 
+During the existing 1200ms outcome window, the winning card bounces lightly with
+a gold outline and six decorative lotus petals; the losing card tilts and lowers
+gently; a draw gives both cards the same small pulse. Effects follow authority
+time, never extend a round or replay on duplicate snapshots. Reduced Motion keeps
+static cards, the winner outline and the textual result, without petals or pulses.
+
 ## Architecture
 
 Current repository structure; these seams are binding for UI remediation:

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
-import type { CardKind } from '@rps-cards/game-core';
+import type { CardKind, RoundOutcome } from '@rps-cards/game-core';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { cancelAnimation, type SharedValue, Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -148,16 +148,35 @@ function DraggableBoardCard({ card, selected, canDrag, reducedMotion, selectedLi
   </View>;
 }
 
-function RoundSlotCard({ kind, label, backLabel, compact, progress, facesVisible, discardProgress, destination, winner }: { readonly kind: CardKind | null; readonly label: string; readonly backLabel: string; readonly compact: boolean; readonly progress: SharedValue<number>; readonly facesVisible: boolean; readonly discardProgress: SharedValue<number>; readonly destination: React.RefObject<View | null>; readonly winner: boolean }) {
+const petalDirections = [[-50, -32], [-24, -66], [24, -66], [50, -32], [28, 60], [-28, 60]] as const;
+
+function WinPetal({ direction, compact, progress }: { readonly direction: readonly [number, number]; readonly compact: boolean; readonly progress: SharedValue<number> }) {
+  const animated = useAnimatedStyle(() => {
+    const t = progress.get();
+    const distance = (.25 + t * .75) * (compact ? .7 : 1);
+    return { opacity: Math.sin(Math.PI * t), transform: [{ translateX: direction[0] * distance }, { translateY: direction[1] * distance }, { rotate: `${direction[0] + t * 90}deg` }, { scale: .8 + Math.sin(Math.PI * t) * .3 }] };
+  });
+  return <Animated.View style={[styles.winPetal, animated]} />;
+}
+
+function RoundSlotCard({ kind, label, backLabel, compact, progress, facesVisible, discardProgress, destination, outcome, outcomeProgress, reducedMotion }: { readonly kind: CardKind | null; readonly label: string; readonly backLabel: string; readonly compact: boolean; readonly progress: SharedValue<number>; readonly facesVisible: boolean; readonly discardProgress: SharedValue<number>; readonly destination: React.RefObject<View | null>; readonly outcome: RoundOutcome | null; readonly outcomeProgress: SharedValue<number>; readonly reducedMotion: boolean }) {
   const ref = useRef<View>(null);
   const delta = useSharedValue({ x: 0, y: 0 });
   const measure = () => ref.current?.measureInWindow((x, y, width, height) => destination.current?.measureInWindow((dx, dy, dw, dh) => delta.set({ x: dx + dw / 2 - x - width / 2, y: dy + dh / 2 - y - height / 2 })));
   const back = useAnimatedStyle(() => ({ opacity: progress.get() < .5 ? 1 : 0, transform: [{ perspective: 800 }, { rotateY: `${progress.get() * 180}deg` }] }));
   const front = useAnimatedStyle(() => ({ opacity: progress.get() >= .5 ? 1 : 0, transform: [{ perspective: 800 }, { rotateY: `${(progress.get() - 1) * 180}deg` }] }));
-  const travel = useAnimatedStyle(() => ({ opacity: 1 - discardProgress.get(), transform: [{ translateX: delta.get().x * discardProgress.get() }, { translateY: delta.get().y * discardProgress.get() }, { scale: 1 - discardProgress.get() * .5 }] }));
-  return <Animated.View ref={ref} onLayout={measure} style={[styles.slotCard, compact && styles.compactSlotCard, winner && styles.winnerCard, travel]}>
+  const travel = useAnimatedStyle(() => {
+    const pulse = reducedMotion || !outcome ? 0 : Math.sin(Math.PI * Math.min(1, outcomeProgress.get() * 2));
+    const settle = reducedMotion || outcome !== 'LOSS' ? 0 : Math.sin(Math.PI * outcomeProgress.get());
+    const lift = outcome === 'WIN' ? -8 * pulse : 6 * settle;
+    const scale = outcome === 'WIN' ? .08 * pulse : outcome === 'DRAW' ? .035 * pulse : 0;
+    return { opacity: (1 - discardProgress.get()) * (1 - .12 * settle), transform: [{ translateX: delta.get().x * discardProgress.get() }, { translateY: delta.get().y * discardProgress.get() + lift }, { rotate: `${6 * settle}deg` }, { scale: 1 - discardProgress.get() * .5 + scale }] };
+  });
+  return <Animated.View ref={ref} onLayout={measure} style={[styles.slotCard, compact && styles.compactSlotCard, travel]}>
     <Animated.View accessibilityElementsHidden={facesVisible} importantForAccessibility={facesVisible ? 'no-hide-descendants' : 'auto'} style={[StyleSheet.absoluteFill, back]}><FolkCardBack label={backLabel} style={styles.slotFill} /></Animated.View>
     {kind ? <Animated.View accessibilityElementsHidden={!facesVisible} importantForAccessibility={facesVisible ? 'auto' : 'no-hide-descendants'} style={[StyleSheet.absoluteFill, front]}><CardFace kind={kind} label={label} style={styles.slotFill} /></Animated.View> : null}
+    {outcome === 'WIN' ? <View testID="round-winner-outline" pointerEvents="none" style={styles.winnerCard} /> : null}
+    {outcome === 'WIN' && !reducedMotion ? <View testID="round-win-petals" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>{petalDirections.map((direction, index) => <WinPetal key={index} direction={direction} compact={compact} progress={outcomeProgress} />)}</View> : null}
   </Animated.View>;
 }
 
@@ -194,6 +213,7 @@ export function FolkBoardView({ opponentName, playerName, scoreLabel, opponentSc
 }) {
   const progress = useSharedValue(0);
   const discardProgress = useSharedValue(0);
+  const outcomeProgress = useSharedValue(0);
   const opponentRail = useRef<View>(null);
   const playerRail = useRef<View>(null);
   const flipKey = presentation?.cards ? `${presentation.key}` : null;
@@ -211,6 +231,15 @@ export function FolkBoardView({ opponentName, playerName, scoreLabel, opponentSc
     if (presentation?.stage === 'discard') discardProgress.set(reducedMotion ? 1 : withTiming(1, { duration: presentation.discardRemainingMs, easing: Easing.linear }));
     return () => cancelAnimation(discardProgress);
   }, [discardProgress, presentation?.stage, reducedMotion]);
+  useEffect(() => {
+    cancelAnimation(outcomeProgress);
+    outcomeProgress.set(reducedMotion ? 1 : presentation?.outcomeProgress ?? 0);
+    if (!reducedMotion && presentation?.stage === 'outcome') outcomeProgress.set(withTiming(1, { duration: presentation.outcomeRemainingMs, easing: Easing.linear }));
+    return () => cancelAnimation(outcomeProgress);
+    // Duplicate snapshots keep the same authority timeline instead of replaying feedback.
+  }, [outcomeProgress, presentation?.key, presentation?.stage, reducedMotion]);
+  const outcome = presentation?.stage === 'outcome' ? presentation.outcome : null;
+  const opponentOutcome = outcome === 'WIN' ? 'LOSS' : outcome === 'LOSS' ? 'WIN' : outcome;
   const dropTargetRef = useRef<View>(null);
   const [dropTarget, setDropTarget] = useState<MeasuredBounds | null>(null);
   const { height } = useWindowDimensions();
@@ -228,16 +257,16 @@ export function FolkBoardView({ opponentName, playerName, scoreLabel, opponentSc
     </View>
     <View testID="board-arena" accessibilityLabel="VS" style={[styles.arena, compact && styles.compactArena]}>
       <View testID="board-opponent-slot" style={[styles.dropSlot, compact && styles.compactDropSlot]}>
-        {opponentLocked || presentation?.stage === 'prepare' || presentation?.cards ? <RoundSlotCard kind={presentation?.cards?.opponent ?? null} label={presentation?.facesVisible && presentation.cards ? cardLabel(presentation.cards.opponent) : cardBackLabel} backLabel={cardBackLabel} compact={compact} progress={progress} facesVisible={presentation?.facesVisible ?? false} discardProgress={discardProgress} destination={opponentRail} winner={presentation?.stage === 'outcome' && presentation.outcome === 'LOSS'} /> : null}
+        {opponentLocked || presentation?.stage === 'prepare' || presentation?.cards ? <RoundSlotCard kind={presentation?.cards?.opponent ?? null} label={presentation?.facesVisible && presentation.cards ? cardLabel(presentation.cards.opponent) : cardBackLabel} backLabel={cardBackLabel} compact={compact} progress={progress} facesVisible={presentation?.facesVisible ?? false} discardProgress={discardProgress} destination={opponentRail} outcome={opponentOutcome} outcomeProgress={outcomeProgress} reducedMotion={reducedMotion} /> : null}
       </View>
       <View style={styles.arenaStatus}><Image source={folkAssets.board.vs} resizeMode="contain" style={[styles.vs, compact && styles.compactVs]} /><Text testID="board-round-status" accessibilityLiveRegion="polite" adjustsFontSizeToFit minimumFontScale={0.75} numberOfLines={2} style={styles.roundStatus}>{statusLabel ?? waitingLabel}</Text></View>
       <View ref={dropTargetRef} testID="board-drop-target" accessible accessibilityLabel={presentation?.facesVisible && presentation.cards ? cardLabel(presentation.cards.player) : lockedCard ? `${selectedLabel}: ${cardLabel(lockedCard.kind)}` : lockLabel} onLayout={measureDropTarget} style={[styles.dropSlot, compact && styles.compactDropSlot]}>
-        {presentation?.stage === 'prepare' || presentation?.cards ? <RoundSlotCard kind={presentation.cards?.player ?? null} label={presentation.facesVisible && presentation.cards ? cardLabel(presentation.cards.player) : cardBackLabel} backLabel={cardBackLabel} compact={compact} progress={progress} facesVisible={presentation.facesVisible} discardProgress={discardProgress} destination={playerRail} winner={presentation.stage === 'outcome' && presentation.outcome === 'WIN'} /> : lockedCard ? <View testID="board-locked-card" accessibilityLabel={cardLabel(lockedCard.kind)}><CardFace kind={lockedCard.kind} label={cardLabel(lockedCard.kind)} style={[styles.slotCard, compact && styles.compactSlotCard]} /></View> : !presentation && !canLock && lastRound ? <CardFace kind={lastRound.player} label={cardLabel(lastRound.player)} compact={compact} /> : null}
+        {presentation?.stage === 'prepare' || presentation?.cards ? <RoundSlotCard kind={presentation.cards?.player ?? null} label={presentation.facesVisible && presentation.cards ? cardLabel(presentation.cards.player) : cardBackLabel} backLabel={cardBackLabel} compact={compact} progress={progress} facesVisible={presentation.facesVisible} discardProgress={discardProgress} destination={playerRail} outcome={outcome} outcomeProgress={outcomeProgress} reducedMotion={reducedMotion} /> : lockedCard ? <View testID="board-locked-card" accessibilityLabel={cardLabel(lockedCard.kind)}><CardFace kind={lockedCard.kind} label={cardLabel(lockedCard.kind)} style={[styles.slotCard, compact && styles.compactSlotCard]} /></View> : !presentation && !canLock && lastRound ? <CardFace kind={lastRound.player} label={cardLabel(lastRound.player)} compact={compact} /> : null}
       </View>
     </View>
     <View style={[styles.playerZone, compact && styles.compactPlayer]}>
-      <View style={styles.playerHeader}><View ref={playerRail} style={styles.playerDiscards}><Text numberOfLines={1} style={styles.discardLabel}>{discardLabel}</Text><View style={styles.discardCards}>{playerDiscards.map((kind, index) => <CardFace key={`${kind}-${index}`} kind={kind} label={cardLabel(kind)} small compact={compact} style={index > 0 ? { marginLeft: compact ? -15 : -22 } : undefined} />)}</View></View><View testID="board-player-score-column" style={styles.headerColumn}><ScorePlaque color="red" label={playerName} score={playerScore} style={[styles.playerScore, compact && styles.compactScore]} /></View><View style={styles.headerColumn}><View style={styles.boardTimer}>{canLock ? <ImageBackground testID="board-selection-timer" source={folkAssets.board.timerBadge} resizeMode="contain" style={styles.boardTimer}><Text style={styles.timerText}>{remaining}s</Text></ImageBackground> : null}</View></View></View>
-      <View style={styles.hand}>
+      <View style={[styles.playerHeader, compact && styles.compactPlayerHeader]}><View ref={playerRail} style={styles.playerDiscards}><Text numberOfLines={1} style={styles.discardLabel}>{discardLabel}</Text><View style={styles.discardCards}>{playerDiscards.map((kind, index) => <CardFace key={`${kind}-${index}`} kind={kind} label={cardLabel(kind)} small compact={compact} style={index > 0 ? { marginLeft: compact ? -15 : -22 } : undefined} />)}</View></View><View testID="board-player-score-column" style={styles.headerColumn}><ScorePlaque color="red" label={playerName} score={playerScore} style={[styles.playerScore, compact && styles.compactScore]} /></View><View style={styles.headerColumn}><View style={styles.boardTimer}>{canLock ? <ImageBackground testID="board-selection-timer" source={folkAssets.board.timerBadge} resizeMode="contain" style={styles.boardTimer}><Text style={styles.timerText}>{remaining}s</Text></ImageBackground> : null}</View></View></View>
+      <View style={[styles.hand, compact && styles.compactHand]}>
         {handCards.map((card, index) => <View key={card.id} style={[styles.handCard, compact && styles.compactHandCard, index > 0 && styles.handOverlap, { transform: [{ rotate: `${(index - (handCards.length - 1) / 2) * 4}deg` }] }]}><DraggableBoardCard card={card} compact={compact} selected={selectedCardId === card.id} canDrag={canLock && !busy} reducedMotion={reducedMotion} selectedLift={selectedLift} target={dropTarget} lockLabel={lockLabel} label={cardLabel(card.kind)} onSelect={onSelect} onLock={onLock} /></View>)}
       </View>
       <Text style={styles.boardStatus}>{summaryLabel ?? (presentation?.stage === 'prepare' && lockedCard ? `${selectedLabel}: ${cardLabel(lockedCard.kind)}` : presentation?.stage === 'outcome' && presentation.outcome === 'WIN' ? '+1' : presentation?.stage === 'outcome' && presentation.outcome === 'LOSS' ? `${opponentName} +1` : lockedCard ? selectedLabel : scoreLabel)}</Text>
@@ -338,7 +367,8 @@ const styles = StyleSheet.create({
   slotCard: { height: 108, width: 72 },
   compactSlotCard: { height: 72, width: 48 },
   slotFill: { height: '100%', width: '100%' },
-  winnerCard: { borderColor: '#8A241A', borderWidth: 2, borderRadius: 8 },
+  winnerCard: { position: 'absolute', top: -2, right: -2, bottom: -2, left: -2, borderColor: '#E3B64B', borderWidth: 3, borderRadius: 8 },
+  winPetal: { position: 'absolute', top: '50%', left: '50%', marginLeft: -4, marginTop: -7, width: 9, height: 14, backgroundColor: '#F5A7B9', borderColor: '#E3B64B', borderWidth: 1, borderTopLeftRadius: 9, borderTopRightRadius: 9, borderBottomRightRadius: 9, borderBottomLeftRadius: 1 },
   arenaStatus: { alignItems: 'center', flexDirection: 'row', height: 48, width: '95%' },
   roundStatus: { flex: 1, color: '#5A3521', fontSize: 12, fontWeight: '900', textAlign: 'center' },
   dropSlot: { alignItems: 'center', borderColor: 'rgba(111,69,44,0.52)', borderRadius: 8, borderStyle: 'dashed', borderWidth: 2, height: 108, justifyContent: 'center', width: 72 },
@@ -351,18 +381,20 @@ const styles = StyleSheet.create({
   hand: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'center', minHeight: 118 },
   handCard: { width: 92 },
   handOverlap: { marginLeft: -20 },
-  compactOpponent: { minHeight: 112 },
+  compactOpponent: { minHeight: 105 },
   compactArena: { height: 194 },
-  compactPlayer: { minHeight: 202 },
-  compactScore: { height: 70, width: 78 },
-  compactBack: { height: 52, width: 35 },
+  compactPlayer: { minHeight: 196 },
+  compactPlayerHeader: { minHeight: 60 },
+  compactScore: { height: 60, width: 78 },
+  compactBack: { height: 45, width: 30 },
   compactFace: { height: 88, width: 58 },
   compactFaceSmall: { height: 48, width: 32 },
   compactEmptySlot: { height: 60, width: 42 },
   compactDropSlot: { height: 72, width: 48 },
   compactVs: { height: 40, width: 40 },
-  compactCard: { height: 112, width: 78 },
-  compactHandCard: { width: 78 },
+  compactHand: { minHeight: 106 },
+  compactCard: { height: 100, width: 70 },
+  compactHandCard: { width: 70 },
   boardStatus: { color: '#FFF0C6', fontSize: 12, fontWeight: '800', minHeight: 17, textAlign: 'center', textShadowColor: '#43291F', textShadowOffset: { height: 1, width: 1 }, textShadowRadius: 1 },
   boardTimer: { alignItems: 'center', height: 58, justifyContent: 'center', width: 58 },
   resultContent: { alignItems: 'center', flexGrow: 1, justifyContent: 'center', paddingVertical: 6, paddingHorizontal: 16 },

@@ -79,7 +79,8 @@ T26 chưa hoàn tất toàn bộ native acceptance và không đóng T25/T22/T14
 
 ## Phase F — Android final evidence (current milestone)
 
-- [x] T27 — Đấu lại BOT quay về chọn bài mới — xóa phiên/bộ bài cũ, mở `/draft`; regression 8 tests/3 suites, mobile typecheck và lint hai file PASS (07/10). Native recheck chưa chạy cho thay đổi này.
+- [x] T27 — Đấu lại BOT quay về chọn bài mới — xóa phiên/bộ bài cũ, mở `/draft`; regression 8 tests/3 suites, mobile typecheck/lint PASS. T28 Android release mặc định đã bấm Đấu lại và thấy Draft mới ba lá úp/timer5s.
+- [x] [T28 — Thử hiệu ứng thắng/thua/hòa](evidence/android/2026-10-07-outcome-effects/REPORT.md) — bài nảy/viền vàng/cánh sen, thua nghiêng, hòa nhún; 59 mobile tests/typecheck/lint PASS; release Samsung mặc định +320dp/font1.3, compact final normal/reduced smoke và footer fix PASS scoped. Giữ các broad native gates mở.
 
 - [ ] [T14 — Native E2E final gate](detail-tasks/T14-native-e2e-final-gate.md) — chạy Android gate sau T22; iOS cases deferred and keep the full cross-platform task open
 - [ ] Checkpoint F recorded in `tasks/plan.md`

@@ -7,6 +7,8 @@ export interface BoardRoundPresentation {
   readonly stage: 'selection' | 'prepare' | 'flip' | 'outcome' | 'discard' | 'complete';
   readonly progress: number;
   readonly flipRemainingMs: number;
+  readonly outcomeProgress: number;
+  readonly outcomeRemainingMs: number;
   readonly discardProgress: number;
   readonly discardRemainingMs: number;
   readonly facesVisible: boolean;
@@ -32,7 +34,8 @@ export function getRoundPresentation(phase: RoomProjection['phase'], round: numb
   const outcome = lastRound && (revealed || phase === 'ROUND_SELECTION') ? (seat === 'PLAYER_A' ? lastRound.outcomeForA : lastRound.outcomeForA === 'WIN' ? 'LOSS' : lastRound.outcomeForA === 'LOSS' ? 'WIN' : 'DRAW') : null;
   const mine = seat === 'PLAYER_A' ? lastRound?.playerA : lastRound?.playerB;
   const theirs = seat === 'PLAYER_A' ? lastRound?.playerB : lastRound?.playerA;
-  return { stage, progress, flipRemainingMs: revealed ? Math.max(0, ROUND_FLIP_MS - elapsed) : 0, facesVisible: Boolean(revealed && progress >= .5), discardProgress: timeline ? Math.max(0, Math.min(1, (now - timeline.completeAt + 300) / 300)) : 0, discardRemainingMs: timeline ? Math.max(0, timeline.completeAt - now) : 0, scoreVisible: !active || stage === 'outcome' || stage === 'discard' || stage === 'complete', discardsVisible: !active || stage === 'complete', outcome, cards: revealed && stage !== 'complete' && mine && theirs ? { player: mine.kind as CardKind, opponent: theirs.kind as CardKind } : null, key: `${lastRound?.round ?? round}` };
+  const outcomeProgress = revealed ? Math.max(0, Math.min(1, (elapsed - ROUND_FLIP_MS) / ROUND_OUTCOME_MS)) : 0;
+  return { stage, progress, flipRemainingMs: revealed ? Math.max(0, ROUND_FLIP_MS - elapsed) : 0, outcomeProgress, outcomeRemainingMs: stage === 'outcome' ? Math.max(0, ROUND_FLIP_MS + ROUND_OUTCOME_MS - elapsed) : 0, facesVisible: Boolean(revealed && progress >= .5), discardProgress: timeline ? Math.max(0, Math.min(1, (now - timeline.completeAt + 300) / 300)) : 0, discardRemainingMs: timeline ? Math.max(0, timeline.completeAt - now) : 0, scoreVisible: !active || stage === 'outcome' || stage === 'discard' || stage === 'complete', discardsVisible: !active || stage === 'complete', outcome, cards: revealed && stage !== 'complete' && mine && theirs ? { player: mine.kind as CardKind, opponent: theirs.kind as CardKind } : null, key: `${lastRound?.round ?? round}` };
 }
 
 // Wake only at presentation boundaries; Reanimated owns every flip frame.

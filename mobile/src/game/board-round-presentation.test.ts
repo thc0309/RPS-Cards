@@ -22,3 +22,9 @@ test('all ingress rejects reordered revisions across rematch and accepts current
   expect(acceptBoardSnapshot(current, { ...current, serverNow: 4900 })).toBe(false);
   expect(acceptBoardSnapshot(current, { ...current, serverNow: 5100 })).toBe(true);
 });
+
+test('outcome feedback catches up to authority time and finishes before discard', () => {
+  expect(getRoundPresentation('ROUND_RESULT', 1, timeline, round, 1600, 'PLAYER_A')).toMatchObject({ stage: 'outcome', outcomeProgress: 0, outcomeRemainingMs: 1200 });
+  expect(getRoundPresentation('ROUND_RESULT', 1, timeline, round, 2200, 'PLAYER_A')).toMatchObject({ stage: 'outcome', outcomeProgress: .5, outcomeRemainingMs: 600 });
+  expect(getRoundPresentation('ROUND_RESULT', 1, timeline, round, 2800, 'PLAYER_A')).toMatchObject({ stage: 'discard', outcomeProgress: 1, outcomeRemainingMs: 0 });
+});

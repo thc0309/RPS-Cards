@@ -6,7 +6,14 @@ Status: T01–T12 complete; Android remediation/evidence active; iOS validation 
 
 - BOT: Result gọi `disposeLocalSession()` rồi replace `/draft`; Draft hiện có tạo lượt chọn mới và adapter mới, không tái dùng bộ bài cũ.
 - Online: contract hiện có đợi cả hai `REMATCH_READY` rồi `startDraft()`; Result chuyển `/draft` cùng room/session khi nhận pha draft.
-- Verification: test Result mới đã tái hiện lỗi `/board` trước sửa; sau sửa 8 tests/3 suites Result/local match/local draft PASS, mobile typecheck và lint hai file PASS. Chưa chạy lại native cho thay đổi này; không đóng các gate Android còn mở.
+- Verification: test Result mới đã tái hiện lỗi `/board` trước sửa; sau sửa 8 tests/3 suites Result/local match/local draft PASS, mobile typecheck và lint hai file PASS. T28 native release mặc định đã xác nhận Đấu lại mở Draft mới với ba lá úp/timer5s; không đóng các gate Android còn mở.
+
+## T28 — Thử hiệu ứng thắng/thua/hòa (2026-10-07)
+
+- Dùng chung `FolkBoardView` cho BOT/online: bài thắng nảy nhẹ + viền vàng + sáu cánh sen, bài thua nghiêng/hạ nhẹ, hòa nhún đồng thời. Giữ nhịp outcome 1200ms, không thêm dependency hay timer gameplay.
+- `BoardRoundPresentation` tính progress/thời gian còn lại theo authority; Reanimated chạy từ progress hiện tại, snapshot lặp không khởi động lại. Reduced Motion chỉ giữ bài, viền và text tĩnh.
+- Native phát hiện footer chữ lớn bị cắt; chỉnh bố trí compact và tỷ lệ card, kiểm tra lại ở320×568dp/font1.3. Motion thường/Reduced Motion qua outcome → lượt mới, footer đủ; settings đã restore.
+- Verification final: 59 tests/24 suites mobile PASS, mobile typecheck/lint/diff PASS; release arm64 build/install PASS. Default + small có bốn lượt, default rematch trở lại Draft; compact cuối có smoke normal/reduced một lượt mỗi case. [REPORT](evidence/android/2026-10-07-outcome-effects/REPORT.md) phân biệt bằng chứng trước/sau compact và các gate còn mở.
 
 Current execution order is Android-only through T13-R, T15–T25, T26 (round reveal), T22 and the Android
 portion of T14. iOS remains required for the later cross-platform release gate,
