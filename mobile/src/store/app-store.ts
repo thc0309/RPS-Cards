@@ -10,6 +10,8 @@ interface AppState extends Preferences {
   readonly activeSeat: 'PLAYER_A' | 'PLAYER_B' | null;
   readonly hasHydrated: boolean;
   setLocale: (locale: Preferences['locale']) => void;
+  setSoundEnabled: (enabled: boolean) => void;
+  setVibrationEnabled: (enabled: boolean) => void;
   setCosmetic: (kind: 'uiThemeId' | 'cardSkinId' | 'boardThemeId', id: Preferences['uiThemeId']) => void;
   setActiveSession: (sessionId: string | null) => void;
   setActiveRoom: (roomCode: string | null, seat?: 'PLAYER_A' | 'PLAYER_B' | null) => void;
@@ -24,6 +26,8 @@ const appStateCreator: StateCreator<AppState> = (set) => ({
   activeSeat: null,
   hasHydrated: false,
   setLocale: (locale: Preferences['locale']) => set({ locale }),
+  setSoundEnabled: (soundEnabled: boolean) => set({ soundEnabled }),
+  setVibrationEnabled: (vibrationEnabled: boolean) => set({ vibrationEnabled }),
   setCosmetic: (kind: 'uiThemeId' | 'cardSkinId' | 'boardThemeId', id: Preferences['uiThemeId']) => set({ [kind]: id }),
   setActiveSession: (activeSessionId: string | null) => set({ activeSessionId }),
   setActiveRoom: (activeRoomCode: string | null, activeSeat: 'PLAYER_A' | 'PLAYER_B' | null = null) => set({ activeRoomCode, activeSeat }),

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { AppState, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import type { CardKind, RoundOutcome } from '@rps-cards/game-core';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { cancelAnimation, type SharedValue, Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, type SharedValue, Easing, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { FolkButton } from './FolkButton';
 import { FolkCard, FolkCardBack } from './FolkCard';
@@ -11,6 +11,8 @@ import { FolkTitle } from './FolkChrome';
 import { folkAssets } from '../ui/folk-assets';
 import type { BoardRoundPresentation } from '../game/board-round-presentation';
 import type { RoundHistoryRow } from '../ui/round-history';
+import { useFeedback } from '../ui/feedback';
+import { usePressMotion, useReducedMotion } from '../ui/motion';
 
 const cardArt = { ROCK: folkAssets.cards.rock, PAPER: folkAssets.cards.paper, SCISSORS: folkAssets.cards.scissors } as const;
 
@@ -20,6 +22,23 @@ function ScorePlaque({ score, label, color, style }: { readonly score: number | 
 
 function CardFace({ kind, label, small = false, compact = false, style }: { readonly kind: CardKind; readonly label: string; readonly small?: boolean; readonly compact?: boolean; readonly style?: StyleProp<ViewStyle> }) {
   return <View accessibilityLabel={label} style={[styles.cardFace, small && styles.cardFaceSmall, compact && (small ? styles.compactFaceSmall : styles.compactFace), style]}><Image source={folkAssets.cards.frame} resizeMode="stretch" style={styles.cardFrame} /><Image source={cardArt[kind]} resizeMode="contain" style={styles.cardArt} /></View>;
+}
+
+function DraftChoice({ position, available, disabled, selected, cardWidth, cardBackLabel, unavailableLabel, reducedMotion, onPick }: { position: number; available: boolean; disabled: boolean; selected: boolean; cardWidth: number; cardBackLabel: string; unavailableLabel: string; reducedMotion: boolean; onPick: (position: number) => void }) {
+  const press = usePressMotion(disabled);
+  const entrance = useSharedValue(1);
+  useEffect(() => {
+    cancelAnimation(entrance);
+    entrance.set(reducedMotion ? 1 : 0);
+    if (!reducedMotion) entrance.set(withDelay(position * 40, withTiming(1, { duration: 100 })));
+    return () => cancelAnimation(entrance);
+  }, [entrance, position, reducedMotion]);
+  const entranceStyle = useAnimatedStyle(() => ({ opacity: reducedMotion ? 1 : .7 + .3 * entrance.get(), transform: [{ translateY: reducedMotion ? 0 : (1 - entrance.get()) * 8 }] }));
+  return <Animated.View style={entranceStyle}><Animated.View style={press.style}>
+    <Pressable testID={`draft-slot-${position}`} accessibilityRole="button" accessibilityLabel={`${cardBackLabel} ${position + 1}${available ? '' : `, ${unavailableLabel}`}`} accessibilityState={{ disabled, selected }} disabled={disabled} onPressIn={press.onPressIn} onPressOut={press.onPressOut} onPress={available ? () => { if (!disabled) onPick(position); } : undefined} style={[styles.draftChoice, { width: cardWidth, height: cardWidth * 1.5 + 12 }, !available && styles.draftUnavailable, selected && styles.draftSelected, selected && reducedMotion && { transform: [{ translateY: 0 }] }]}>
+      <FolkCardBack label={cardBackLabel} style={styles.draftCardBack} /><Text style={styles.positionLabel}>{available ? position + 1 : '×'}</Text>
+    </Pressable>
+  </Animated.View></Animated.View>;
 }
 
 export function FolkDraftView({ title, status, instruction, timer, cardBackLabel, unavailableLabel, positions, selectedPosition, disabled, onPick }: {
@@ -35,6 +54,14 @@ export function FolkDraftView({ title, status, instruction, timer, cardBackLabel
   readonly onPick: (position: number) => void;
 }) {
   const availablePositions = new Set(positions);
+  const feedback = useFeedback();
+  const picking = useRef(disabled);
+  useEffect(() => { picking.current = disabled; }, [disabled, positions, selectedPosition]);
+  const pick = (position: number) => {
+    if (picking.current || disabled || !availablePositions.has(position)) return;
+    picking.current = true; feedback.play('paper-select'); onPick(position);
+  };
+  const reducedMotion = useReducedMotion();
   const { width, height } = useWindowDimensions();
   const compact = height < 650;
   const cardWidth = Math.min(110, (width - 48) / 3);
@@ -53,10 +80,7 @@ export function FolkDraftView({ title, status, instruction, timer, cardBackLabel
       {[0, 1, 2].map((position) => {
         const available = availablePositions.has(position);
         const slotDisabled = disabled || !available;
-        return <Pressable key={position} testID={`draft-slot-${position}`} accessibilityRole="button" accessibilityLabel={`${cardBackLabel} ${position + 1}${available ? '' : `, ${unavailableLabel}`}`} accessibilityState={{ disabled: slotDisabled, selected: selectedPosition === position }} disabled={slotDisabled} onPress={available ? () => onPick(position) : undefined} style={[styles.draftChoice, { width: cardWidth, height: cardWidth * 1.5 + 12 }, !available && styles.draftUnavailable, selectedPosition === position && styles.draftSelected]}>
-        <FolkCardBack label={cardBackLabel} style={styles.draftCardBack} />
-        <Text style={styles.positionLabel}>{available ? position + 1 : '×'}</Text>
-        </Pressable>;
+        return <DraftChoice key={position} position={position} available={available} disabled={slotDisabled} selected={selectedPosition === position} cardWidth={cardWidth} cardBackLabel={cardBackLabel} unavailableLabel={unavailableLabel} reducedMotion={reducedMotion} onPick={pick} />;
       })}
     </View>
     <ImageBackground source={folkAssets.board.scrollPanel} resizeMode="stretch" imageStyle={styles.fillImage} style={styles.instructionScroll}>
@@ -100,6 +124,9 @@ function DraggableBoardCard({ card, selected, canDrag, reducedMotion, selectedLi
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const committed = useSharedValue(false);
+  const feedback = useFeedback();
+  const lift = useCallback(() => feedback.play('paper-select', { scope: 'board-hand' }), [feedback]);
+  useEffect(() => () => feedback.cancelScope('board-hand'), [feedback]);
 
   useEffect(() => {
     const next = selected ? selectedLift : 0;
@@ -114,6 +141,7 @@ function DraggableBoardCard({ card, selected, canDrag, reducedMotion, selectedLi
       startX.set(x.get());
       startY.set(y.get());
     })
+    .onStart(() => { scheduleOnRN(lift); })
     .onUpdate((event) => {
       x.set(startX.get() + event.translationX);
       y.set(startY.get() + event.translationY);
@@ -135,7 +163,7 @@ function DraggableBoardCard({ card, selected, canDrag, reducedMotion, selectedLi
       if (success || committed.get()) return;
       x.set(reducedMotion ? 0 : withSpring(0, { duration: 400, dampingRatio: 1 }));
       y.set(reducedMotion ? selectedLift : withSpring(selectedLift, { duration: 400, dampingRatio: 1 }));
-    }), [canDrag, card.id, cardBounds, committed, onLock, reducedMotion, selected, selectedLift, startX, startY, target, x, y]);
+    }), [canDrag, card.id, cardBounds, committed, lift, onLock, reducedMotion, selected, selectedLift, startX, startY, target, x, y]);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }, { translateY: y.get() }] }));
   const measureCard = () => cardRef.current?.measureInWindow((left, top, width, height) => setCardBounds({ x: left, y: top, width, height }));
 
@@ -274,7 +302,7 @@ export function FolkBoardView({ opponentName, playerName, scoreLabel, opponentSc
   </FolkSurface>;
 }
 
-export function FolkResultView({ title, outcome, scoreLabel, playerScore, opponentScore, roundLabel, history, cardLabel, primaryLabel, secondaryLabel, primaryDisabled, onPrimary, onSecondary }: {
+export function FolkResultView({ title, outcome, scoreLabel, playerScore, opponentScore, roundLabel, history, cardLabel, primaryLabel, secondaryLabel, primaryDisabled, onPrimary, onSecondary, celebrateWin = false }: {
   readonly title: string;
   readonly outcome: string;
   readonly scoreLabel: string;
@@ -288,17 +316,39 @@ export function FolkResultView({ title, outcome, scoreLabel, playerScore, oppone
   readonly primaryDisabled?: boolean;
   readonly onPrimary: () => void;
   readonly onSecondary: () => void;
+  readonly celebrateWin?: boolean;
 }) {
+  const reducedMotion = useReducedMotion();
+  const entrance = useSharedValue(1);
+  const petals = useSharedValue(0);
+  const celebrated = useRef(false);
+  const [showPetals, setShowPetals] = useState(false);
+  useEffect(() => {
+    entrance.set(reducedMotion ? 1 : 0);
+    if (!reducedMotion) entrance.set(withTiming(1, { duration: 300 }));
+    const lifecycle = AppState.addEventListener('change', (state) => { if (state !== 'active') { cancelAnimation(entrance); entrance.set(1); cancelAnimation(petals); setShowPetals(false); } });
+    return () => { lifecycle.remove(); cancelAnimation(entrance); };
+  }, [entrance, petals, reducedMotion]);
+  useEffect(() => {
+    cancelAnimation(petals); setShowPetals(false);
+    if (!celebrateWin || celebrated.current) return;
+    celebrated.current = true;
+    if (reducedMotion) return;
+    setShowPetals(true); petals.set(0); petals.set(withTiming(1, { duration: 900 }));
+    const timer = setTimeout(() => setShowPetals(false), 900);
+    return () => { clearTimeout(timer); cancelAnimation(petals); };
+  }, [celebrateWin, petals, reducedMotion]);
+  const entranceStyle = useAnimatedStyle(() => ({ opacity: reducedMotion ? 1 : .7 + entrance.get() * .3, transform: [{ scale: reducedMotion ? 1 : .95 + entrance.get() * .05 }] }));
   return <FolkSurface background="village"><ScrollView contentContainerStyle={styles.resultContent}>
     <FolkTitle style={styles.resultTitle}>{title}</FolkTitle>
-    <View style={styles.outcomeStamp}><Text adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={2} style={styles.outcomeText}>{outcome}</Text></View>
+    <Animated.View style={[styles.outcomeStamp, entranceStyle]}><Text adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={2} style={styles.outcomeText}>{outcome}</Text>{showPetals && !reducedMotion ? <View testID="match-win-petals" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>{petalDirections.map((direction, index) => <WinPetal key={index} direction={direction} compact={false} progress={petals} />)}</View> : null}</Animated.View>
     <ImageBackground testID="result-score" source={folkAssets.controls.redButton} resizeMode="stretch" imageStyle={styles.fillImage} style={styles.resultScore}><View style={styles.resultScoreContent}><Text adjustsFontSizeToFit numberOfLines={1} style={styles.resultScoreLabel}>{scoreLabel}</Text><Text adjustsFontSizeToFit numberOfLines={1} style={styles.resultScoreValue}>{playerScore} – {opponentScore}</Text></View></ImageBackground>
     <ImageBackground source={folkAssets.board.scrollPanel} resizeMode="stretch" imageStyle={styles.fillImage} style={styles.historyPanel}>
       <View style={styles.historyContent}>
       {history.map((row) => <View key={row.round} style={styles.historyRow}><CardFace kind={row.local} label={cardLabel(row.local)} small style={styles.historyCard} /><View testID={`result-round-copy-${row.round}`} style={styles.roundCopy}><Text style={styles.roundLabel}>{roundLabel} {row.round}</Text><Text style={styles.historyVs}>VS</Text></View><CardFace kind={row.opponent} label={cardLabel(row.opponent)} small style={styles.historyCard} /></View>)}
       </View>
     </ImageBackground>
-    <View style={styles.resultActions}><FolkButton accessibilityLabel={primaryLabel} disabled={primaryDisabled} onPress={onPrimary} style={styles.resultButton}>{primaryLabel}</FolkButton><FolkButton variant="blue" accessibilityLabel={secondaryLabel} onPress={onSecondary} style={styles.resultButton}>{secondaryLabel}</FolkButton></View>
+    <View style={styles.resultActions}><FolkButton cue={null} accessibilityLabel={primaryLabel} disabled={primaryDisabled} onPress={onPrimary} style={styles.resultButton}>{primaryLabel}</FolkButton><FolkButton cue={null} variant="blue" accessibilityLabel={secondaryLabel} onPress={onSecondary} style={styles.resultButton}>{secondaryLabel}</FolkButton></View>
   </ScrollView></FolkSurface>;
 }
 
@@ -306,7 +356,7 @@ export function FolkResultLoadingView({ label }: { readonly label: string }) {
   return <FolkSurface background="village" contentStyle={styles.resultLoading}><FolkTitle>{label}</FolkTitle></FolkSurface>;
 }
 
-export function FolkReconnectingView({ title, body, remaining }: { readonly title: string; readonly body: string; readonly remaining: number }) {
+export function FolkReconnectingView({ title, body, remaining, statusStyle }: { readonly title: string; readonly body: string; readonly remaining: number; readonly statusStyle?: ComponentProps<typeof Animated.View>['style'] }) {
   return <FolkSurface background="woven" contentStyle={styles.reconnectBoard}>
     <View testID="reconnect-backdrop" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.reconnectBackdrop}>
       <ScorePlaque color="blue" label="VS" score="–" style={styles.reconnectTopScore} />
@@ -314,7 +364,7 @@ export function FolkReconnectingView({ title, body, remaining }: { readonly titl
       <View style={styles.reconnectArena}><View style={styles.emptySlot} /><Image source={folkAssets.board.vs} resizeMode="contain" style={styles.vs} /><View style={styles.emptySlot} /></View>
     </View>
     <View style={styles.dim} />
-    <View testID="reconnect-status" accessible accessibilityRole="alert" accessibilityLabel={`${title}. ${body} ${remaining}s`} accessibilityLiveRegion="polite" style={styles.reconnectModal}><Image source={folkAssets.decorations.drum} resizeMode="contain" style={styles.reconnectDrum} /><ImageBackground source={folkAssets.board.scrollPanel} resizeMode="stretch" style={styles.reconnectScroll}><Text accessibilityRole="header" adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1} style={styles.reconnectTitle}>{title}</Text><Text numberOfLines={3} style={styles.reconnectBody}>{body}</Text><Text style={styles.reconnectCountdown}>{remaining}s</Text></ImageBackground></View>
+    <Animated.View testID="reconnect-status" accessible accessibilityRole="alert" accessibilityLabel={`${title}. ${body} ${remaining}s`} accessibilityLiveRegion="polite" style={[styles.reconnectModal, statusStyle]}><Image source={folkAssets.decorations.drum} resizeMode="contain" style={styles.reconnectDrum} /><ImageBackground source={folkAssets.board.scrollPanel} resizeMode="stretch" imageStyle={styles.fillImage} style={styles.reconnectScroll}><View style={styles.reconnectContent}><Text accessibilityRole="header" adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1} style={styles.reconnectTitle}>{title}</Text><Text style={styles.reconnectBody}>{body}</Text><Text style={styles.reconnectCountdown}>{remaining}s</Text></View></ImageBackground></Animated.View>
   </FolkSurface>;
 }
 
@@ -423,8 +473,9 @@ const styles = StyleSheet.create({
   dim: { backgroundColor: 'rgba(24,14,10,0.72)', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
   reconnectModal: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 18, position: 'absolute', right: 18, top: 0 },
   reconnectDrum: { height: 132, marginBottom: -40, width: 132, zIndex: 1 },
-  reconnectScroll: { alignItems: 'center', height: 178, justifyContent: 'center', maxWidth: '100%', paddingHorizontal: 40, paddingTop: 22, width: 320 },
-  reconnectTitle: { color: '#8A241A', fontSize: 22, fontWeight: '900', textAlign: 'center' },
-  reconnectBody: { color: '#5A3521', fontSize: 13, marginTop: 4, textAlign: 'center' },
+  reconnectScroll: { alignItems: 'center', minHeight: 178, justifyContent: 'center', maxWidth: '100%', width: 320 },
+  reconnectContent: { alignItems: 'center', paddingHorizontal: 48, paddingVertical: 48, width: '100%' },
+  reconnectTitle: { alignSelf: 'stretch', color: '#8A241A', fontSize: 22, fontWeight: '900', textAlign: 'center' },
+  reconnectBody: { alignSelf: 'stretch', color: '#5A3521', fontSize: 13, marginTop: 4, textAlign: 'center' },
   reconnectCountdown: { color: '#8A241A', fontSize: 27, fontWeight: '900', marginTop: 4 },
 });

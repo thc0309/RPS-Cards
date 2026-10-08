@@ -5,4 +5,6 @@ test('describes win, loss, draw and an early forfeit without inventing rounds', 
   expect(resultOutcome(1, 3, false, 4)).toBe('LOSS');
   expect(resultOutcome(2, 2, false, 4)).toBe('DRAW');
   expect(resultOutcome(1, 0, true, 2)).toBe('FORFEIT_WIN');
+  expect(resultOutcome(0, 0, true, 0)).toBe('FORFEIT_WIN');
+  expect(resultOutcome(0, 0, false, 0)).toBe('FORFEIT_LOSS');
 });

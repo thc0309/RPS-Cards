@@ -30,6 +30,8 @@ export const en = {
   customize: 'Customize',
   customizeTitle: 'Customize',
   language: 'Language',
+  sound: 'Sound',
+  vibration: 'Vibration',
   interfaceTheme: 'Interface theme',
   cardSkin: 'Card skin',
   boardTheme: 'Board theme',

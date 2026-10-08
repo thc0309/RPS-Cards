@@ -1,3 +1,5 @@
+import { beginAdFeedback, endAdFeedback } from '../ui/feedback';
+
 export type AdOutcome = 'shown' | 'closed' | 'failed' | 'timeout' | 'no-fill';
 
 export interface InterstitialProvider {
@@ -15,20 +17,52 @@ function nativeProvider(): InterstitialProvider {
     };
     return { attempt: (timeoutMs) => new Promise<AdOutcome>((resolve) => {
       const ad = native.InterstitialAd.createForAdRequest(native.TestIds.INTERSTITIAL);
+      const instance = `interstitial-${++adSequence}`;
       let settled = false;
+      let retired = false;
+      let showing = false;
       let timer: ReturnType<typeof setTimeout> | null = null;
       const removers: (() => void)[] = [];
-      const settle = (outcome: AdOutcome) => { if (!settled) { settled = true; if (timer) clearTimeout(timer); removers.forEach((remove) => remove()); resolve(outcome); } };
-      removers.push(ad.addAdEventListener(native.AdEventType.LOADED, () => { void ad.show().catch(() => settle('failed')); }));
-      removers.push(ad.addAdEventListener(native.AdEventType.CLOSED, () => settle('closed')));
-      removers.push(ad.addAdEventListener(native.AdEventType.ERROR, () => settle('failed')));
-      timer = setTimeout(() => settle('timeout'), timeoutMs);
-      ad.load();
+      const settle = (outcome: AdOutcome) => { if (!settled) { settled = true; if (timer) clearTimeout(timer); timer = null; resolve(outcome); } };
+      const retire = () => {
+        if (retired) return;
+        retired = true;
+        removers.forEach((remove) => remove());
+        settle('failed');
+      };
+      const close = (outcome: AdOutcome) => {
+        if (retired) return;
+        settle(outcome);
+        retire();
+        endAdFeedback(instance);
+      };
+      // Promise timeout releases room entry; it does not prove the full-screen ad closed.
+      // CLOSED is the documented display lifetime boundary (installed Mobile Ads v15).
+      removers.push(ad.addAdEventListener(native.AdEventType.LOADED, () => {
+        if (retired || showing) return;
+        if (!beginAdFeedback(instance, retire)) { close('no-fill'); return; }
+        showing = true;
+        try { void ad.show().catch(() => { if (!retired) settle('failed'); }); }
+        catch { settle('failed'); }
+      }));
+      removers.push(ad.addAdEventListener(native.AdEventType.CLOSED, () => close('closed')));
+      removers.push(ad.addAdEventListener(native.AdEventType.ERROR, () => {
+        if (retired) return;
+        if (showing) settle('failed'); // Show errors may be delivered after display; keep suppression.
+        else close('failed');
+      }));
+      timer = setTimeout(() => {
+        settle('timeout');
+        if (!showing) retire(); // A late LOADED must not open an ad after entering the room.
+      }, timeoutMs);
+      try { ad.load(); } catch { close('failed'); }
     }) };
   } catch {
     return { attempt: async () => 'no-fill' };
   }
 }
+
+let adSequence = 0;
 
 export function createInterstitialGate(provider: InterstitialProvider = nativeProvider(), timeoutMs = 4_000): { readonly attemptInterstitial: () => Promise<AdOutcome> } {
   let inFlight: Promise<AdOutcome> | null = null;

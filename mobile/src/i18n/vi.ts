@@ -32,6 +32,8 @@ export const vi: Dictionary = {
   customize: 'Tùy chỉnh',
   customizeTitle: 'Tùy chỉnh',
   language: 'Ngôn ngữ',
+  sound: 'Âm thanh',
+  vibration: 'Rung',
   interfaceTheme: 'Giao diện',
   cardSkin: 'Bộ bài',
   boardTheme: 'Bàn đấu',

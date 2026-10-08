@@ -77,6 +77,30 @@ T26 chưa hoàn tất toàn bộ native acceptance và không đóng T25/T22/T14
 - [ ] T26-G — Android evidence đã thu và báo cáo; hai máy/full geometry/performance stress matrix còn PARTIAL/BLOCKED
 - [ ] CP26-4 — T25/T22/T14 đã liên kết evidence thực chạy; broad gates chưa đóng
 
+## T29 — Hiệu ứng và âm thanh toàn game (implemented; native acceptance PARTIAL 2026-10-07)
+
+A–K product code đã triển khai,117 mobile/13core/27server tests PASS; không còn
+planning-only. Checkbox bên dưới biểu thị acceptance đầy đủ, không chỉ code done.
+Chi tiết: [T29](plan.md#t29--hiệu-ứng-và-âm-thanh-toàn-game-implemented-2026-10-07);
+[Báo cáo native](evidence/android/2026-10-07-game-feedback/REPORT.md).
+
+- [ ] T29-A — Pack13 WAV325,148 bytes/module release đã có; loa output có capture, tai nghe/A-B nghe chưa nghiệm thu
+- [x] T29-B — Sound ON/Rung OFF, migration/partialize/defaults và relaunch persistence PASS
+- [ ] T29-C — Runtime RootLayout/finite pool/terminal/ad/lifecycle/welcome implemented; automated PASS, audio-focus native còn mở
+- [ ] T29-D — Switch vi/en/màn nhỏ/relaunch PASS scoped; TalkBack đầy đủ còn mở
+- [ ] CP29-1 — Code/automated PASS; native audio/settings PARTIAL
+- [ ] T29-E — Shared controls0.97/120ms/callback tests PASS; full native cancelled/TalkBack matrix còn mở
+- [ ] T29-F — Draft ba slot/entrance/pick implemented; automated + native timeout/rematch PASS scoped
+- [ ] T29-G — Accepted lock/replacement/invalid/stale tests PASS; full physical gesture/TalkBack matrix còn mở
+- [ ] T29-H — Authority timeline/fourth-round/seat-correct cues PASS automated; native audio/video scoped, full fixtures/RM matrix PARTIAL
+- [ ] CP29-2 — Code/automated PASS; native four-round matrix PARTIAL
+- [ ] T29-I — Home/Rooms/Lobby + ad-lifetime guards PASS automated; ad>4s/occlusion observed, missing-close recovery automated only
+- [ ] T29-J — Board→Result once-only/rematch PASS integration, BOT + one-phone online rematch observed; two-phone acceptance BLOCKED
+- [ ] T29-K — Reconnect code/tests and one-phone TCP interruption/recovery observed; full radio/background matrix PARTIAL
+- [ ] CP29-3 — Code/automated PASS; whole-game native PARTIAL
+- [ ] T29-L — Review/build/Samsung11 matches/10 rematches +35s Perfetto có; headphones/full TalkBack/baseline trace analysis/physical two-phone matrix còn mở
+- [ ] CP29-4 — PARTIAL; hai Android thật BLOCKED vì người dùng chỉ có một máy. Không đóng T26/T25/T22/T14 rộng hơn.
+
 ## Phase F — Android final evidence (current milestone)
 
 - [x] T27 — Đấu lại BOT quay về chọn bài mới — xóa phiên/bộ bài cũ, mở `/draft`; regression 8 tests/3 suites, mobile typecheck/lint PASS. T28 Android release mặc định đã bấm Đấu lại và thấy Draft mới ba lá úp/timer5s.

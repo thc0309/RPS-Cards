@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import type { CardKind } from '@rps-cards/game-core';
 import { FolkBoardView } from '../components/FolkGameViews';
 import { useRoundPresentation } from '../game/board-round-presentation';
+import { useRoundFeedback } from '../ui/round-feedback';
 import { LocalMatchAdapter } from '../game/local-match-adapter';
 import { getLocalDraftResult, getLocalMatchAdapter, setLocalMatchAdapter } from '../game/local-session';
 import { translate } from '../i18n';
@@ -20,10 +21,15 @@ export function BoardScreen() {
   const [adapter, setAdapter] = useState(() => getLocalMatchAdapter());
   const [snapshot, setSnapshot] = useState(() => adapter?.getState() ?? null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const roundFeedback = useRoundFeedback();
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const reducedMotion = useReducedMotion();
   const remaining = useCountdownSeconds(snapshot?.deadline?.deadlineAt);
   const presentation = useRoundPresentation(snapshot?.match.phase ?? 'ROUND_SELECTION', snapshot?.match.round ?? 1, snapshot?.timeline, snapshot?.match.lastRound, 'PLAYER_A', 0, snapshot?.matchId);
+  const receive = useCallback((next: NonNullable<typeof snapshot>) => {
+    roundFeedback.update({ matchId: next.matchId, round: next.match.round, phase: next.match.phase, lockedCardId: next.match.players.PLAYER_A.lockedCardId, seat: 'PLAYER_A', synced: true, timeline: next.timeline, lastRound: next.match.lastRound, deadlineAt: next.deadline?.deadlineAt, terminalCue: next.match.result ? next.match.discards.length < 8 ? 'connection-lost' : next.match.result.winner === 'PLAYER_A' ? 'match-win' : 'match-loss' : undefined });
+    setSnapshot(next);
+  }, [roundFeedback]);
 
   useEffect(() => {
     if (!adapter) {
@@ -32,12 +38,12 @@ export function BoardScreen() {
       const created = new LocalMatchAdapter(draft.hands, (max) => Math.floor(Math.random() * max));
       setLocalMatchAdapter(created);
       setAdapter(created);
-      setSnapshot(created.getState());
+      receive(created.getState());
       return;
     }
-    setSnapshot(adapter.getState());
-    return adapter.subscribe(() => setSnapshot(adapter.getState()));
-  }, [adapter, router]);
+    receive(adapter.getState());
+    return adapter.subscribe(() => receive(adapter.getState()));
+  }, [adapter, receive, router]);
   useEffect(() => {
     if (snapshot?.match.phase === 'MATCH_RESULT') router.replace('/result');
   }, [router, snapshot?.match.phase]);

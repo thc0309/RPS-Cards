@@ -386,6 +386,82 @@ gently; a draw gives both cards the same small pulse. Effects follow authority
 time, never extend a round or replay on duplicate snapshots. Reduced Motion keeps
 static cards, the winner outline and the textual result, without petals or pulses.
 
+### Whole-game feedback — T29 (implemented 2026-10-07)
+
+Extend the existing faceless folk presentation across Home, Rooms, Lobby, Draft,
+Board, Reconnecting and Result with short paper/wood/bamboo/plucked-note effects.
+T29 product code and its automated regression checks are implemented. Android
+acceptance is partial; physical two-device online, headphones/audio focus, full
+TalkBack and performance gates remain open. See
+[tasks/evidence/android/2026-10-07-game-feedback/REPORT.md](tasks/evidence/android/2026-10-07-game-feedback/REPORT.md)
+for build provenance and the exact native scope. Existing T26/T28 gameplay timing
+and privacy remain binding.
+
+- Persist two independent preferences in the existing local store: sound enabled
+  by default and vibration disabled by default. Missing or malformed saved values
+  use those defaults. Hydrate preferences before any startup sound. Sound-off
+  stops current and pending playback immediately; enabling it does not replay
+  missed events. Reduced Motion independently removes movement, stagger and
+  decorative particles while retaining readable text and static outlines.
+- Bundle 13 short, documented sound clips locally, with no network dependency,
+  background music, recording permission or background playback. Use one active
+  sound at most, prioritize gameplay/result over tap/tick, and discard obsolete
+  requests rather than queue them. Load/playback failure never blocks navigation,
+  a game action or the authoritative clock. Stop/cancel on background and clean
+  up native players/listeners on disposal; resume does not replay history.
+- Shared controls use the T23 press contract: scale 0.97, at most 120ms, unchanged
+  hit areas and a single action callback. Draft always keeps three facedown
+  positions; its decorative entrance/selection never reveals the removed third
+  card or an opponent choice, and never delays the 5-second deadline/navigation.
+- Selection feedback describes the local gesture. Lock/replacement confirmation
+  follows an accepted local state or accepted online projection, not a pending
+  request. Invalid/stale/retried actions do not produce a false confirmation.
+  Lock sounds remain identical across card kinds before reveal.
+- Prepare ticks follow future points in the existing 800ms window; missed ticks
+  are skipped. A single shared flip sound follows the visible-face boundary of
+  the 600ms flip, followed by seat-correct WIN/LOSS/DRAW in the 1200ms outcome and
+  paper collection during the 300ms discard. Late/duplicate snapshots and initial
+  recovery snapshots never replay earlier cues or extend these stages.
+- Only the active player's selection gets ticks at 3, 2 and 1 seconds. Suppress
+  these optional countdown ticks while a screen reader is active. Match result
+  gets one distinct terminal cue after a fresh authoritative completion; resume,
+  remount and result polling do not repeat it. A forfeit cannot fabricate reveal
+  or round scoring; retain its existing reason text with a neutral terminal cue.
+  A shared RootLayout runtime owns one in-memory completion record for the
+  current match. BOT/online Board records a trusted foreground, synced
+  non-terminal → MATCH_RESULT transition before navigation; Result consumes it
+  once for the same match within 2 seconds of receipt. Initial recovery snapshots
+  only seed state; score/outcome shape and Result mount never establish freshness.
+  Board unmount during navigation preserves this record; Result unmount/leave,
+  cancellation, mute, background or ad suppression invalidates it. Consumption
+  happens before asynchronous playback; late loading, remount or enabling sound
+  cannot replay it. Keep the consumed/cancelled marker until match changes;
+  rematch invalidates old requests and RootLayout disposal clears all records.
+- Suppress game audio through that same runtime before interstitial show and
+  cancel current/pending cues. Restore automatically only on the owning ad's
+  confirmed close or a confirmed failure before display; a 4-second room-entry
+  timeout, show/error of uncertain display state or AppState active is insufficient.
+  Gate settlement must not remove the ad lifetime listener; stale ad callbacks
+  cannot release a newer ad's suppression. Create/join remains bounded and
+  idempotent, independent of audio suppression. If close is missing, permit
+  explicit recovery by enabling Sound from the visible, interactive foreground
+  game (toggle off/on if already enabled), retire that ad instance/listeners and
+  never replay missed cues. Native verification must prove this interaction is
+  unavailable while an interstitial remains visible; otherwise keep T29-I blocked
+  for SDK-supported recovery rather than ship indefinite suppression or restore
+  sound on an unproven timer. Preference changes (including soundEnabled=true),
+  mute or a new match alone never release suppression; only the explicit switch
+  interaction satisfying the recovery conditions above is the fallback exception.
+- Home/room/lobby success, connection lost/restored and rematch reuse short clips.
+  Result content/actions stay available immediately; its entrance completes
+  within 300ms, bounded winner petals within 900ms. Reconnecting uses the existing
+  text/countdown plus a subtle opacity pulse, with no sound on each retry.
+- Keep faceless card art, layout, native route transitions, private projections,
+  BOT rematch to Draft and two-party online rematch consent. Android release
+  evidence must include audible output, small-screen/font1.3 geometry, sound-off,
+  Reduced Motion, TalkBack, lifecycle/interruptions and measured frame stability.
+  Automated proof, one-device smoke and two-device acceptance are separate gates.
+
 ## Architecture
 
 Current repository structure; these seams are binding for UI remediation:

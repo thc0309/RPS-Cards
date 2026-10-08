@@ -7,12 +7,17 @@ export interface Preferences {
   readonly uiThemeId: CosmeticId;
   readonly cardSkinId: CosmeticId;
   readonly boardThemeId: CosmeticId;
+  readonly soundEnabled: boolean;
+  readonly vibrationEnabled: boolean;
 }
 
-export const PREFERENCE_KEYS = ['locale', 'uiThemeId', 'cardSkinId', 'boardThemeId'] as const;
+export const PREFERENCE_KEYS = ['locale', 'uiThemeId', 'cardSkinId', 'boardThemeId', 'soundEnabled', 'vibrationEnabled'] as const;
 
 export function defaultPreferences(deviceLanguage?: string | null): Preferences {
-  return { locale: resolveDeviceLocale(deviceLanguage), uiThemeId: 'folk_default', cardSkinId: 'folk_default', boardThemeId: 'folk_default' };
+  return {
+    locale: resolveDeviceLocale(deviceLanguage), uiThemeId: 'folk_default', cardSkinId: 'folk_default', boardThemeId: 'folk_default',
+    soundEnabled: true, vibrationEnabled: false,
+  };
 }
 
 export function normalizePreferences(value: unknown, deviceLanguage?: string | null): Preferences {
@@ -24,6 +29,8 @@ export function normalizePreferences(value: unknown, deviceLanguage?: string | n
     uiThemeId: normalizeCosmeticId(candidate.uiThemeId),
     cardSkinId: normalizeCosmeticId(candidate.cardSkinId),
     boardThemeId: normalizeCosmeticId(candidate.boardThemeId),
+    soundEnabled: typeof candidate.soundEnabled === 'boolean' ? candidate.soundEnabled : defaults.soundEnabled,
+    vibrationEnabled: typeof candidate.vibrationEnabled === 'boolean' ? candidate.vibrationEnabled : defaults.vibrationEnabled,
   };
 }
 
@@ -33,5 +40,7 @@ export function selectPersistedPreferences(state: Preferences & { readonly activ
     uiThemeId: state.uiThemeId,
     cardSkinId: state.cardSkinId,
     boardThemeId: state.boardThemeId,
+    soundEnabled: state.soundEnabled,
+    vibrationEnabled: state.vibrationEnabled,
   };
 }

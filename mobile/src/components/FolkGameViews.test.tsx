@@ -4,6 +4,9 @@ import { FolkBoardView, FolkDraftView, FolkReconnectingView, FolkResultView, isC
 import { FolkButton } from './FolkButton';
 import { getRoundPresentation } from '../game/board-round-presentation';
 import { folkAssets } from '../ui/folk-assets';
+const mockPlay = jest.fn();
+jest.mock('../ui/feedback', () => ({ useFeedback: () => ({ play: mockPlay, cancelScope: jest.fn() }) }));
+beforeEach(() => mockPlay.mockClear());
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { act, create } = require('react-test-renderer');
@@ -68,6 +71,10 @@ describe('FolkDraftView', () => {
 
     act(() => { slots[0].props.onPress(); });
     expect(onPick).toHaveBeenCalledWith(0);
+    expect(mockPlay).toHaveBeenCalledWith('paper-select');
+    act(() => { slots[1].props.onPress(); slots[0].props.onPress(); });
+    expect(onPick).toHaveBeenCalledTimes(1);
+    expect(mockPlay).toHaveBeenCalledTimes(1);
   });
 });
 

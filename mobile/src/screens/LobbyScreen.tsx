@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { createOnlineRoomClient } from '../game/colyseus-client';
@@ -11,29 +12,60 @@ import { FolkButton } from '../components/FolkButton';
 import { FolkSurface } from '../components/FolkSurface';
 import { folkAssets } from '../ui/folk-assets';
 import { FolkBackButton, FolkTitle } from '../components/FolkChrome';
+import { useFeedback } from '../ui/feedback';
+import { useReducedMotion } from '../ui/motion';
 
 export function LobbyScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ roomCode?: string; sessionId?: string }>();
   const locale = useAppStore((state) => state.locale);
   const setActiveRoom = useAppStore((state) => state.setActiveRoom);
+  const feedback = useFeedback();
+  const reducedMotion = useReducedMotion();
+  const reducedRef = useRef(reducedMotion);
+  reducedRef.current = reducedMotion;
+  const flash = useSharedValue(0);
   const [snapshot, setSnapshot] = useState<RoomProjection | null>(null);
   const client = useMemo(() => createOnlineRoomClient(), []);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  const highlightStyle = useAnimatedStyle(() => ({ opacity: reducedMotion ? ((snapshot?.players.length ?? 1) > 1 ? 1 : 0) : flash.value }));
+  useEffect(() => { if (reducedMotion) { cancelAnimation(flash); flash.value = 0; } }, [flash, reducedMotion]);
   useEffect(() => {
     if (!params.roomCode || !params.sessionId) { router.replace('/rooms'); return; }
     let active = true;
     let polling = false;
+    let previousPresent: boolean | null = null;
+    let foreground = AppState.currentState === 'active';
+    let epoch = 0;
+    const subscription = AppState.addEventListener('change', (state) => {
+      foreground = state === 'active';
+      previousPresent = null;
+      epoch++;
+      cancelAnimation(flash); flash.value = 0;
+    });
     const poll = async () => {
       if (polling) return;
       polling = true;
-      try { const next = await client.snapshot(params.roomCode!, params.sessionId!); if (active) setSnapshot(next); } catch { if (active) router.replace({ pathname: '/reconnecting', params: { roomCode: params.roomCode, sessionId: params.sessionId } }); }
+      const requestEpoch = epoch;
+      try {
+        const next = await client.snapshot(params.roomCode!, params.sessionId!);
+        if (active) {
+          const present = next.players.length > 1;
+          if (foreground && requestEpoch === epoch && previousPresent === false && present) {
+            flash.value = 1;
+            if (!reducedRef.current) flash.value = withTiming(0, { duration: 250 });
+            feedback.play('confirm', { expiresAt: Date.now() + 300 });
+          }
+          previousPresent = foreground && requestEpoch === epoch ? present : null;
+          setSnapshot(next);
+        }
+      } catch { if (active) router.replace({ pathname: '/reconnecting', params: { roomCode: params.roomCode, sessionId: params.sessionId } }); }
       finally { polling = false; }
     };
     void poll();
     const handle = setInterval(() => { void poll(); }, 1_000);
-    return () => { active = false; clearInterval(handle); };
-  }, [client, params.roomCode, params.sessionId, router]);
+    return () => { active = false; clearInterval(handle); subscription.remove(); cancelAnimation(flash); };
+  }, [client, feedback, flash, params.roomCode, params.sessionId, router]);
   useEffect(() => {
     if (snapshot && snapshot.phase !== 'WAITING') router.replace({ pathname: '/draft', params: { roomCode: params.roomCode, sessionId: params.sessionId } });
   }, [params.roomCode, params.sessionId, router, snapshot]);
@@ -48,11 +80,11 @@ export function LobbyScreen() {
     <FolkSurface background="village" contentStyle={styles.surface}>
       <View pointerEvents="none" style={styles.tint} />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}><FolkBackButton label={text('leaveRoom')} onPress={() => void leave()} style={styles.back} /><FolkTitle>{text('lobbyTitle')}</FolkTitle></View>
+        <View style={styles.header}><FolkBackButton cue="paper-slide" label={text('leaveRoom')} onPress={() => void leave()} style={styles.back} /><FolkTitle>{text('lobbyTitle')}</FolkTitle></View>
         <ImageBackground source={folkAssets.board.scrollPanel} resizeMode="stretch" style={styles.invitation}>
           <Text style={styles.label}>{text('roomCode')}</Text>
           <Text selectable adjustsFontSizeToFit numberOfLines={1} style={styles.code}>{params.roomCode}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={text('copyCode')} style={styles.copy} onPress={() => void Clipboard.setStringAsync(params.roomCode ?? '')}><Image source={folkAssets.icons.copy} style={styles.copyIcon} /><Text style={styles.copyText}>{text('copyCode')}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={text('copyCode')} style={styles.copy} onPress={() => { feedback.play('ui-tap'); void Clipboard.setStringAsync(params.roomCode ?? '').catch(() => undefined); }}><Image source={folkAssets.icons.copy} style={styles.copyIcon} /><Text style={styles.copyText}>{text('copyCode')}</Text></Pressable>
         </ImageBackground>
         <View style={styles.players}>
           <ImageBackground source={folkAssets.controls.paperPanel} resizeMode="stretch" style={styles.playerPanel}>
@@ -62,13 +94,14 @@ export function LobbyScreen() {
           </ImageBackground>
           <View pointerEvents="none" style={styles.vs}><Text style={styles.vsText}>VS</Text></View>
           <ImageBackground source={folkAssets.controls.paperPanel} resizeMode="stretch" style={styles.playerPanel}>
+            <Animated.View testID="lobby-opponent-highlight" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.highlight, highlightStyle]} />
             <Text style={styles.playerTitle}>{text('onlineOpponent')}</Text>
             <View style={[styles.avatar, styles.opponentAvatar]}><Text style={styles.silhouette}>{(snapshot?.players.length ?? 1) > 1 ? '●' : '?'}</Text></View>
             <Text accessibilityLiveRegion="polite" style={styles.waiting}>{(snapshot?.players.length ?? 1) > 1 ? `✓ ${text('ready')}` : text('waitingOpponent')}</Text>
           </ImageBackground>
         </View>
         <Text accessibilityLiveRegion="polite" style={styles.status}>{text('playersReady')}: {snapshot?.players.length ?? 1} / 2</Text>
-        <FolkButton accessibilityLabel={text('leaveRoom')} style={styles.leave} onPress={() => void leave()}>{text('leaveRoom')}</FolkButton>
+        <FolkButton cue="paper-slide" accessibilityLabel={text('leaveRoom')} style={styles.leave} onPress={() => void leave()}>{text('leaveRoom')}</FolkButton>
       </ScrollView>
     </FolkSurface>
   );
@@ -88,6 +121,7 @@ const styles = StyleSheet.create({
   copyText: { color: '#8A241A', fontWeight: '800' },
   players: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: -4, maxWidth: '100%', width: 332 },
   playerPanel: { alignItems: 'center', flex: 1, height: 250, justifyContent: 'center', maxWidth: 220, paddingHorizontal: 20, paddingVertical: 28 },
+  highlight: { borderColor: '#D6A73A', borderRadius: 12, borderWidth: 2, bottom: 22, left: 12, position: 'absolute', right: 12, top: 22 },
   playerTitle: { color: '#8A241A', fontSize: 17, fontWeight: '900', textAlign: 'center' },
   avatar: { alignItems: 'center', backgroundColor: '#E8C77B', borderColor: '#8C5A2C', borderRadius: 52, borderWidth: 3, height: 104, justifyContent: 'center', marginVertical: 6, overflow: 'hidden', width: 104 },
   opponentAvatar: { backgroundColor: '#D8C49B' },

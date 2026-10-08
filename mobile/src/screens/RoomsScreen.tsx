@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 import { createInterstitialGate } from '../ads/interstitial-gate';
@@ -12,12 +13,21 @@ import { FolkButton } from '../components/FolkButton';
 import { FolkSurface } from '../components/FolkSurface';
 import { folkAssets } from '../ui/folk-assets';
 import { FolkBackButton, FolkTitle } from '../components/FolkChrome';
+import { useFeedback } from '../ui/feedback';
+import { useReducedMotion } from '../ui/motion';
 
 export function RoomsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ error?: RoomEntryError }>();
   const locale = useAppStore((state) => state.locale);
   const setActiveRoom = useAppStore((state) => state.setActiveRoom);
+  const feedback = useFeedback();
+  const reducedMotion = useReducedMotion();
+  const reducedRef = useRef(reducedMotion);
+  reducedRef.current = reducedMotion;
+  const mounted = useRef(true);
+  const flash = useSharedValue(0);
+  const highlightStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
   const [code, setCode] = useState('');
   const [error, setError] = useState<RoomEntryError | null>(params.error ?? null);
   const [busy, setBusy] = useState(false);
@@ -25,13 +35,28 @@ export function RoomsScreen() {
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const flow = useMemo(() => createRoomEntryFlow(createOnlineRoomClient(), createInterstitialGate(), {
     saveCredential: (credential) => saveReconnectCredential(credential),
-    openLobby: (roomCode, sessionId) => { setActiveRoom(roomCode); router.replace({ pathname: '/lobby', params: { roomCode, sessionId } }); },
-  }), [router, setActiveRoom]);
+    openLobby: (roomCode, sessionId) => {
+      if (!mounted.current) return;
+      mounted.current = false;
+      if (AppState.currentState === 'active') {
+        flash.value = 1;
+        if (!reducedRef.current) flash.value = withTiming(0, { duration: 250 });
+        // This accepted event may finish during native route transition; no source scope.
+        feedback.play('confirm', { expiresAt: Date.now() + 300 });
+      }
+      setActiveRoom(roomCode);
+      router.replace({ pathname: '/lobby', params: { roomCode, sessionId } });
+    },
+  }), [feedback, flash, router, setActiveRoom]);
   useEffect(() => {
-    let active = true;
-    void readReconnectCredential().then((credential) => { if (active) setCurrentRoom(credential); }).catch(() => undefined);
-    return () => { active = false; };
-  }, []);
+    mounted.current = true;
+    void readReconnectCredential().then((credential) => { if (mounted.current) setCurrentRoom(credential); }).catch(() => undefined);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') { cancelAnimation(flash); flash.value = 0; }
+    });
+    return () => { mounted.current = false; subscription.remove(); cancelAnimation(flash); };
+  }, [flash]);
+  useEffect(() => { if (reducedMotion) { cancelAnimation(flash); flash.value = 0; } }, [flash, reducedMotion]);
   const run = async (action: Promise<{ readonly ok: boolean; readonly code?: RoomEntryError }>) => {
     setBusy(true);
     try {
@@ -49,14 +74,15 @@ export function RoomsScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.scroll}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <FolkBackButton label={text('home')} onPress={() => router.replace('/')} style={styles.back} />
+          <FolkBackButton cue="paper-slide" label={text('home')} onPress={() => { mounted.current = false; router.replace('/'); }} style={styles.back} />
           <FolkTitle>{text('roomsTitle')}</FolkTitle>
         </View>
         <ImageBackground source={folkAssets.controls.paperPanel} resizeMode="stretch" style={styles.panel} imageStyle={styles.panelImage}>
+          <Animated.View testID="room-entry-highlight" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.highlight, highlightStyle]} />
           <View style={styles.panelContent}>
           <Text style={styles.sectionTitle}>{text('currentRoom')}</Text>
           {currentRoom ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`${text('currentRoom')}: ${currentRoom.roomCode}`} style={styles.currentRoom} onPress={() => router.replace({ pathname: '/reconnecting', params: { roomCode: currentRoom.roomCode, sessionId: currentRoom.sessionId } })}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`${text('currentRoom')}: ${currentRoom.roomCode}`} style={styles.currentRoom} onPress={() => { mounted.current = false; feedback.play('paper-slide'); router.replace({ pathname: '/reconnecting', params: { roomCode: currentRoom.roomCode, sessionId: currentRoom.sessionId } }); }}>
               <Text style={styles.currentRoomLabel}>{text('currentRoom')}</Text><Text style={styles.currentRoomCode}>{currentRoom.roomCode}</Text>
             </Pressable>
           ) : (
@@ -86,6 +112,7 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', justifyContent: 'center', maxWidth: 360, width: '100%' },
   back: { left: 0, position: 'absolute', zIndex: 2 },
   panel: { marginTop: 4, maxWidth: 360, width: '100%' },
+  highlight: { borderColor: '#D6A73A', borderRadius: 12, borderWidth: 2, bottom: 24, left: '10%', position: 'absolute', right: '10%', top: 24 },
   panelContent: { alignItems: 'center', paddingHorizontal: '12%', paddingVertical: 42 },
   panelImage: { height: '100%', opacity: 0.96, width: '100%' },
   sectionTitle: { color: '#8A241A', fontSize: 20, fontWeight: '900', marginBottom: 4, textAlign: 'center' },

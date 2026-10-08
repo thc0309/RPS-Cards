@@ -15,9 +15,366 @@ Status: T01–T12 complete; Android remediation/evidence active; iOS validation 
 - Native phát hiện footer chữ lớn bị cắt; chỉnh bố trí compact và tỷ lệ card, kiểm tra lại ở320×568dp/font1.3. Motion thường/Reduced Motion qua outcome → lượt mới, footer đủ; settings đã restore.
 - Verification final: 59 tests/24 suites mobile PASS, mobile typecheck/lint/diff PASS; release arm64 build/install PASS. Default + small có bốn lượt, default rematch trở lại Draft; compact cuối có smoke normal/reduced một lượt mỗi case. [REPORT](evidence/android/2026-10-07-outcome-effects/REPORT.md) phân biệt bằng chứng trước/sau compact và các gate còn mở.
 
-Current execution order is Android-only through T13-R, T15–T25, T26 (round reveal), T22 and the Android
-portion of T14. iOS remains required for the later cross-platform release gate,
-but it does not block completion of the current Android milestone.
+Current requested work is T29 implementation and scoped Android validation.
+Product code A–K is implemented; T29-L/native acceptance remains partial before
+refreshing T22 and the Android portion of T14.
+Existing T26/T25 native gaps remain open. iOS remains required for the later
+cross-platform release gate and is deferred in this Android milestone.
+
+## T29 — Hiệu ứng và âm thanh toàn game (implemented 2026-10-07)
+
+Trạng thái: A–K đã triển khai; mobile117/core13/server27 tests PASS. Native
+Samsung một máy + peer lập trình có evidence; acceptance L/CP29-4 PARTIAL, hai
+Android thật BLOCKED (người dùng xác nhận chỉ có một máy). Chưa commit/push T29.
+Contract: [Whole-game feedback](../SPEC.md#whole-game-feedback--t29-implemented-2026-10-07).
+Bằng chứng và các giới hạn: [REPORT](evidence/android/2026-10-07-game-feedback/REPORT.md).
+
+### Implementation and verification — 2026-10-07
+
+- A/B: 13 WAV gốc325,148 bytes, recipe/metadata check; expo-audio57.0.5, release
+  không có RECORD_AUDIO; Sound ON/Rung OFF, normalize và persist đã kiểm thử.
+- C/D/E: RootLayout sở hữu pool13 player, một active request/voice, priority/expiry,
+  cancel mute/background/ad; switch vi/en cuộn được, Close cố định; shared press
+ 0.97/120ms. Native READY trước listener được xử lý qua player.isLoaded.
+- F/G/H: Draft ba slot, local selection và accepted lock/replacement, tick/flip/
+  outcome/discard theo authority; không sửa5s/15s/BOT2s hay800/600/1200/300ms.
+- I/J/K: ad lifetime tách timeout4s; terminal record xuyên Board→Result, consume
+  một lần trong2s; rematch reset trước paper-slide và Draft mới; forfeit có reason
+  trung tính; reconnect deadline/stale callbacks và Rooms reply sau leave được guard.
+- Native phát hiện body Reconnecting vượt padding của khung giấy: constrain text
+  theo bề rộng trong khung và cho khung tăng chiều cao theo font/body; padding
+  đặt trong content View để không làm ảnh nền phần trăm bị thu nhỏ.
+- Automated:117 mobile tests/34 suites;13core/27server, typecheck/mobile lint/build
+  PASS. Ten-rematch test giữ pool13, không tăng timer/terminal cũ. Expo Doctor20/21
+  do12 patch mismatches baseline; root lint baseline unused guest vẫn còn.
+- CP29-1/2/3: implementation/automated PASS; native PARTIAL theo matrix. CP29-4
+  PARTIAL/BLOCKED; không tự đóng T26-F/G hay T25/T22/T14.
+
+
+### Skill Intake Summary — T29
+
+- Stack thực tế: npm workspaces; mobile Expo 57.0.14, React Native 0.86.2,
+  Expo Router 57, Reanimated 4.5.1, Gesture Handler, Zustand và AsyncStorage.
+- T26/T28 đã có prepare/flip/outcome/discard và hiệu ứng thắng/thua/hòa dùng chung
+  BOT/online. Home có CustomizeSheet; preference store có normalize/partialize/
+  hydration; RootLayout có native Stack. Tận dụng các tầng này.
+- Intake ban đầu chưa có audio/haptic runtime. Build đã cài expo-audio ~57.0.5
+  bằng Expo CLI theo SDK57, dùng installed types/official docs và release playback
+  thay cho candidate ban đầu57.0.3.
+- Skill đã đọc cho kế hoạch: vibe-plan, planning-and-task-breakdown,
+  frontend-ui-engineering và frontend-profile. Khi build dùng vibe-build,
+  source-driven-development cho Expo Audio, frontend-ui-engineering cho các view;
+  performance-optimization cho native trace. Regression dùng vibe-test/TDD;
+  review dùng vibe-review. Không áp dụng browser PASS thay cho Android native.
+- Gap: chưa có skill chuyên sản xuất sound pack hay native audio capture.
+  Dùng asset brief + công cụ audio/thiết bị thực; cân nhắc bổ sung skill nếu làm
+  nhiều sound pack. Không cài/tạo skill trong pha plan, không cần thêm framework.
+
+### Quyết định và phạm vi
+
+1. Phong cách giấy/gỗ/tre, nốt đàn ngắn; giữ card không có khuôn mặt và art/layout.
+   Tái dùng T28, không viết lại hiệu ứng mỗi lượt. Không thêm nhạc nền, voice-over,
+   Lottie/Skia, animation engine hoặc custom JS route transitions.
+2. Một bộ phát ở RootLayout với API nội bộ nhỏ. Cue map cố định, tối đa một tiếng
+   đang phát; gameplay/result ưu tiên, tap/tick đang quá hạn bị bỏ. Không event bus,
+   hàng đợi âm thanh, timer gameplay mới hoặc một engine riêng cho BOT/online.
+3. Mặc định âm thanh ON, rung OFF, có hai switch lưu cục bộ. Rung Android dùng
+   React Native Vibration hiện có cho nhịp ngắn đã thử trên máy, không thêm package
+   haptics. Rung chỉ ở thao tác xác nhận/thắng đã xảy ra; audio/RM/rung độc lập.
+4. Sound không được chặn action hoặc navigation. Module load/play lỗi thì game
+   tiếp tục bình thường; seek/load bất đồng bộ phải kiểm tra yêu cầu còn hợp lệ
+   sau mute/background/đổi match/unmount. Không phát các cue đã hết hạn.
+5. Giữ nguyên 5s Draft, 15s selection, BOT replacement 2s và pipeline
+   prepare 800ms → flip 600ms → outcome 1200ms → discard 300ms. Không thay server,
+   game-core rules/protocol hay gửi thông tin audio/cosmetic qua API mới.
+6. Cues theo matchId + round + sự kiện đã xác thực; dedupe hữu hạn trong phiên
+   hiện tại, reset đúng khi đổi match. Snapshot đầu khi hồi phục chỉ seed trạng
+   thái; không phát lại lịch sử. Nhịp chuẩn bị dùng các mốc authority chưa qua.
+   Terminal record thuộc runtime RootLayout, tồn tại xuyên Board → Result cho cả
+   BOT/online; freshness không suy từ score/outcome shape hoặc Result mount.
+   Ad suppression cũng thuộc runtime này; thời hạn gate create/join và thời gian
+   ad có thể còn visible là hai lifetime riêng.
+7. Kế hoạch này mở rộng phần sound/rung trước đây được loại khỏi T23/T25. T29-E
+   thực hiện contract control T23; T29-J/K bổ sung phần Result/Reconnecting của
+   T25. Không tạo task/code trùng; chỉ đóng T23/T25 khi đủ acceptance của chúng.
+
+### Bộ âm thanh và bản đồ trải nghiệm
+
+13 clip mono, xuất định dạng được module/Android release chứng minh hỗ trợ;
+đồng đều độ lớn, không clipping, trim khoảng lặng. Tổng file audio mục tiêu ≤2MB.
+Asset manifest ghi nguồn/quyền sử dụng hoặc cách tự tạo, duration và nơi dùng.
+
+| Cue | Thời lượng mục tiêu | Dùng tại |
+|---|---|---|
+| ui-tap | 60–100ms | Nút, Back, đóng/mở Tùy chỉnh; một tiếng mỗi press hợp lệ |
+| paper-select | 80–160ms | Chọn lá Draft/tay bài, nhấc giấy nhẹ |
+| card-lock | 80–160ms | Khóa/đổi bài được authority chấp nhận; cùng âm cho mọi loại bài |
+| paper-slide | 120–250ms | Điều hướng do người chơi, thu bài, mở Draft mới |
+| confirm | 180–300ms | Chào Home lần đầu, vào phòng, đối thủ vào/sẵn sàng, kết nối lại |
+| tick | 40–80ms | Ba nhịp prepare và countdown 3/2/1; không chạy cùng nhau |
+| card-flip | 180–300ms | Một âm cho cả hai bài lúc bắt đầu nhìn thấy mặt bài |
+| round-win | 250–450ms | WIN: nốt đàn đi lên, khớp nảy/viền/cánh sen T28 |
+| round-loss | 200–350ms | LOSS: hai nốt nhẹ đi xuống, khớp bài nghiêng |
+| round-draw | 150–250ms | DRAW: âm trung tính, hai bài nhún cùng nhau |
+| match-win | 700–1000ms | Thắng cả trận: đoạn đàn 5 nốt, tách khỏi thắng lượt |
+| match-loss | 350–600ms | Thua cả trận: đoạn đàn trầm, không âm báo lỗi chói |
+| connection-lost | 150–250ms | Mất mạng một lần, không phát theo mỗi poll/retry |
+
+| Flow/view | Motion bổ sung | Điều kiện/giới hạn |
+|---|---|---|
+| Home | Logo/actions opacity + scale nhẹ, tổng ≤220ms | Welcome một lần/launch sau hydrate; trở về Home không chào lại |
+| Controls/navigation | Press 0.97/120ms; giữ native Stack | Không delay callback; disabled/cancelled press không phát tap |
+| Rooms/Lobby | Khung xác nhận/sẵn sàng sáng một lần ≤250ms | Theo success/state edge, không theo polling; lỗi vẫn có text |
+| Draft | Ba lá úp enter ≤180ms; chọn nâng nhẹ ≤6dp | Luôn ba slot, unavailable vẫn disabled; không thêm face payload |
+| Drag/replace | Giữ T24 drag/snap-back; nhấn outline target khi hợp lệ | Invalid drop không xác nhận; accepted replacement không reset deadline |
+| Prepare | Nhịp sáng hai slot ở mốc 0/260/520ms của cửa sổ 800ms | Chỉ chạy các mốc còn ở tương lai, không tạo countdown mới |
+| Flip/outcome/discard | Giữ T26/T28; thêm sound cùng timeline | Một flip chung; WIN/LOSS đúng seat, DRAW không cộng điểm |
+| Result | Stamp/score/history enter ≤300ms; winner petals hữu hạn ≤900ms | Nội dung/nút sẵn ngay; không có match DRAW giả; forfeit có reason và cue trung tính |
+| Reconnecting | Opacity pulse nhẹ trên trạng thái chờ | RM tĩnh; retry/countdown không phát thêm sound/steal focus |
+| Rematch | Paper-slide và Draft mới | BOT xóa phiên cũ; online chỉ khi cả hai đồng ý; không phát thắng cũ |
+
+### Task Plan — T29
+
+Các slice A–K dưới đây đã triển khai; acceptance/verification giữ làm contract.
+Các mục native thiếu evidence vẫn mở theo REPORT, không đồng nhất code done với
+full acceptance. S/M mô tả từng phần hành vi có thể kiểm chứng.
+
+#### T29-A — Sound pack và chứng minh native module (M; phụ thuộc: không)
+
+- Outcome: có 13 clip nghe được, manifest và module phù hợp SDK trước khi nối gameplay.
+- Acceptance: nguồn/duration/size đủ; chọn expo-audio theo SDK đã cài bằng Expo CLI,
+  đọc đúng official docs trước API; phát được ui-tap + match-win trên release Android
+  bằng pilot nhỏ dùng Home, không xin microphone/background playback hay giữ UI thử.
+- Verification: nghe A/B pack trên loa/tai nghe; kiểm metadata/size; Expo Doctor,
+  mobile typecheck và release build/install. Nếu module không hợp SDK, ghi lỗi cụ
+  thể, điều chỉnh lựa chọn trước T29-C; không đánh dấu audio PASS từ mock.
+- Files: mobile/assets/audio/* + README; mobile/package.json; package-lock.json;
+  mobile/app.json chỉ khi native config thực sự cần; HomeScreen pilot tạm.
+- Skills: vibe-build, source-driven-development. Docs: https://docs.expo.dev/versions/latest/sdk/audio/
+  (đối chiếu version SDK57 và kiểu đã cài, không lấy latest khác SDK làm contract).
+
+#### T29-B — Lưu preference âm thanh/rung (S; phụ thuộc: không)
+
+- Acceptance: soundEnabled=true/vibrationEnabled=false mặc định; normalize giá trị
+  cũ/sai kiểu an toàn, giữ locale/cosmetics/active session; hydrate/partialize đúng
+  và setter lưu được sau relaunch. Không lưu token/hand trong AsyncStorage.
+- Verification: unit tests default, dữ liệu cũ/sai, round-trip và set/persist/hydrate.
+- Files: mobile/src/store/persistence.ts; app-store.ts; các test tương ứng.
+- Skills: vibe-build, vibe-test.
+
+#### T29-C — Runtime chung + welcome Home (M; phụ thuộc: A, B)
+
+- Acceptance: một owner native audio ở RootLayout, finite cue map/players; Home
+  chào một lần sau hydrate; sound-off/background dừng ngay cả pending request;
+  không replay khi bật lại/resume, không bắt app khác dừng nhạc đang phát.
+- Acceptance: gameplay/result ưu tiên hơn tap/tick, một active sound, không backlog;
+  load/play/release lỗi không tạo unhandled rejection hoặc chặn action. Rung ngắn
+  chỉ khi bật, dùng native Vibration; cleanup players/listeners khi dispose.
+- Verification: fake player tests cho mute trong lúc load/seek, overlapping requests,
+  audio failure, background/resume, cleanup và remount welcome; nghe native pilot.
+- Files: mobile/src/ui/feedback.tsx + test (mới, nếu cần); mobile/app/_layout.tsx;
+  HomeScreen.tsx + test. Cue map nằm cùng runtime trước khi có nhu cầu tách thực tế.
+- Ownership terminal (dùng ở J): giữ một record in-memory cho match hiện tại gồm
+  matchId, cue đã xác thực, thời điểm nhận và consumed/cancelled. Board chỉ ghi
+  trước navigation khi nhận transition hợp lệ từ non-terminal → MATCH_RESULT
+  của cùng match trong foreground đã sync; initial/recovery/resume snapshot chỉ
+  seed, không tạo record. Result với matchId khớp tiêu thụ một lần, đánh dấu trước
+  async play; record hết hạn sau 2s từ lúc Board nhận transition thì bỏ, không đợi
+  audio tải xong. Không persistence, route token, queue hay event bus.
+- Board unmount do sang Result giữ record; Result unmount/leave/cancel, mute,
+  background hoặc ad suppression hủy active/pending và record chưa tiêu thụ;
+  giữ dấu consumed/cancelled đến hết match để không tái tạo. Đổi match/rematch
+  xóa record cũ, vô hiệu async completion cũ; RootLayout dispose xóa toàn bộ.
+  Resume/unmute không phục hồi record. Mọi play sau load/seek kiểm lại match,
+  hạn dùng, owner còn sống và eligibility; audio lỗi vẫn được coi đã tiêu thụ.
+- Ownership ad (wiring ở I): native ad attempt báo suppression trước gọi show,
+  runtime cancel active/pending/candidate rồi chặn cue mới. Mute và matchId độc
+  lập ad-instance; đổi preference sang ON/new match/AppState active không tự gỡ
+  suppression. Ngoại lệ chỉ là explicit recovery từ thao tác switch tại game
+  được xác minh theo I; setter soundEnabled=true không phải bằng chứng ad đóng.
+- Verification bổ sung: fake clock/player chứng minh record đi qua source
+  unmount, consume một lần, expiry2s/cancel/late load và owner dispose; I/J kiểm
+  chứng tích hợp route và ad lifetime. Không coi unit mock là native audio PASS.
+- Skills: vibe-build, source-driven-development, vibe-test.
+
+#### T29-D — Switch trong Tùy chỉnh (S; phụ thuộc: B, C)
+
+- Acceptance: hai switch Âm thanh/Sound và Rung/Vibration phản ánh/persist đúng;
+  tắt sound dừng clip ngay, không tự phát preview khi tắt; thao tác với switch sound
+  dùng trạng thái mới, không phát một tiếng tap lọt qua sau mute.
+- Acceptance: sheet cuộn được nếu cần; font1.3/vi/en không cắt nút đóng, hit area
+  ≥44dp, TalkBack đọc label và checked state; RM không bị đổi theo sound/rung.
+- Verification: component tests labels/checked/actions, persistence test B; native
+  small/font1.3 toggle, relaunch và TalkBack. Test không đếm implementation calls.
+- Files: CustomizeSheet.tsx + test; mobile/src/i18n/{vi.ts,en.ts} + i18n test khi cần.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-E — Phản hồi control dùng chung, thực hiện T23 (M; phụ thuộc: C, D)
+
+- Acceptance: FolkButton/FolkBackButton/card press theo 0.97/120ms; một tap khi
+  press được kích hoạt, không phát trên render/press-in bị hủy/disabled. Action
+  chạy một lần, không chờ audio/animation; RM giữ phản hồi border/opacity tĩnh.
+- Verification: focused control tests cho tap nhanh/cancel/disabled, accessible
+  action, callback count; native Home → Rooms → Back → Tùy chỉnh → Chơi BOT.
+- Files: FolkButton.tsx; FolkChrome.tsx; FolkCard.tsx; ui/motion.ts; focused tests.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-F — Feedback chọn bài Draft (M; phụ thuộc: E)
+
+- Acceptance: ba lá úp entrance/press nhẹ; mỗi lựa chọn hợp lệ có paper-select;
+  placeholder không phản hồi giả. Giữ privacy/vị trí/5s và chuyển Board hiện có;
+  auto-pick vẫn hoàn thành, không thêm animation delay để giữ người ở Draft.
+- Verification: BOT + hai-seat online tests, unavailable/rapid pick/timeout;
+  native ba slot ở320dp/font1.3 và normal/RM, không lộ discarded third card.
+- Files: FolkGameViews.tsx + test; DraftScreen.tsx/OnlineDraftScreen.tsx khi wiring cần.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-G — Chọn, thả và đổi bài được chấp nhận (M; phụ thuộc: F)
+
+- Acceptance: paper-select ở lựa chọn/nhấc local; card-lock/rung xác nhận chỉ khi
+  owned lock thay đổi được authority chấp nhận. Rejected/stale/invalid drop/busy
+  không tạo false success; response/poll cho cùng accepted action không phát đôi.
+- Acceptance: T24 selection/drag/custom accessibility action và hit targets giữ
+  nguyên; replacement trả lá cũ về tay, không restart 15s/BOT2s, không có tiếng
+  phân biệt ROCK/PAPER/SCISSORS trước reveal. Auto-lock chỉ xác nhận một lần.
+- Verification: lock/replacement/late-response regression trước-sau, gesture vs
+  TalkBack path; physical Android drop/replace/invalid drop. Không suy native PASS
+  từ timeout tự chọn bài.
+- Files: FolkGameViews.tsx; BoardScreen.tsx; OnlineBoardScreen.tsx; focused tests.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-H — Âm thanh cả bốn lượt theo timeline (M; phụ thuộc: G)
+
+- Acceptance: prepare ba tick tương lai, flip một âm lúc facesVisible đổi sang
+  true, WIN/LOSS/DRAW theo viewer, discard paper-slide; countdown chỉ 3/2/1 khi
+  active/canLock và screen reader OFF. Không restart/extend authority timeline.
+- Acceptance: dedupe theo match/round/stage; initial recovery, skipped stages,
+  stale reply, muted/background và forfeit không replay cue. Bỏ clip quá muộn để
+  nằm trọn phase; chỉ đánh thức ở mốc sự kiện, không JS/audio call mỗi frame.
+- Verification: fake-clock tests cho từng mốc, duplicate/reordered/late snapshot,
+  seat A/B inversion, fourth round và rematch. Native BOT bốn lượt có đủ WIN/LOSS/
+  DRAW qua các fixture hợp lệ; online two-seat automated rồi native riêng ở L.
+- Files: FolkGameViews.tsx + test; game/board-round-presentation.ts + test nếu cần
+  bổ sung mốc prepare từ cùng authority timeline. Co-locate feedback hook trước;
+  chỉ tách ui/round-feedback.ts nếu logic/test thực sự cần riêng.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-I — Hoàn thiện Home, Rooms, Lobby (M; phụ thuộc: H)
+
+- Acceptance: entrance Home ≤220ms; native navigation giữ nguyên, user route change
+  dùng paper-slide hợp lý, không chồng tap+slide. Vào phòng/đối thủ vào/ready có
+  confirm và frame highlight một lần theo transition, không mỗi poll/mount.
+- Acceptance: create/join/ad gate không nhân đôi; chưa thành công không báo success;
+  lỗi có text rõ. Không phát game cue khi ad có thể còn visible; trở lại game
+  không replay lịch sử. Provider hiện có timeout4s và settle xóa CLOSED listener;
+  gate promise resolve/timeout hoặc AppState active không chứng minh ad đã đóng.
+- Contract: nối suppression C trước show; chỉ tự gỡ bằng CLOSED đúng instance
+  hoặc failure được xác nhận xảy ra trước display. Show rejection/ERROR sau khi
+  show đã bắt đầu mà không chứng minh chưa display được xử lý như chưa rõ đóng.
+  Tách settle của promise create/join khỏi cleanup lifetime ad; giữ CLOSED/error
+  listener cần thiết qua timeout, cleanup khi closure/failure hợp lệ hoặc recovery
+  dưới đây. Không cho attempt mới chồng lên instance chưa rõ đóng; guard callback
+  muộn/duplicate/stale instance để ad cũ không gỡ suppression của ad mới.
+- Missing CLOSED: timeout vẫn giải phóng create/join theo contract hiện có. Không
+  watchdog tự bật âm; khi game đã hiển thị và nhận thao tác trực tiếp trở lại,
+  cho phép khôi phục rõ ràng bằng bật Sound trong Tùy chỉnh (nếu switch đang ON,
+  tắt rồi bật). Chỉ thao tác này tại game foreground mới retire instance chưa rõ
+  đóng và cleanup listener, không tự bật sound preference hay replay cue. Xác
+  minh native rằng tương tác đó không thực hiện được khi interstitial còn visible;
+  nếu không chứng minh được, giữ audio suppressed và gate T29-I BLOCKED để chốt
+  recovery theo API SDK đã cài, không thêm API giả hoặc timeout bật âm thiếu proof.
+- Verification: Home/room-entry/lobby regressions, double tap/poll/failed join;
+  fake ad displayed >4s với AppState vẫn active, CLOSED sau timeout, pre-display
+  failure/show error chưa rõ, missing CLOSED + explicit recovery, mute/new match
+  giữa ad, stale callback sau instance mới. Native empty/error/busy/success/
+  waiting/ready, RM và cùng ad cases; giữ room-entry idempotency/game rules.
+- Files: HomeScreen.tsx; RoomsScreen.tsx; LobbyScreen.tsx;
+  mobile/src/ads/interstitial-gate.ts + test; CustomizeSheet.tsx + test cho
+  explicit recovery từ thao tác switch thực; runtime C wiring; focused tests.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-J — Kết quả cả trận và Đấu lại (M; phụ thuộc: I)
+
+- Acceptance: Result entrance ≤300ms, thắng có bounded petals ≤900ms và match-win,
+  thua match-loss; nút/history hiển thị và dùng ngay. Không replay round4/terminal
+  trên poll/remount/resume. Forfeit giữ reason, cue trung tính, không dựng flip giả.
+  Board BOT/online ghi trusted transition vào owner C trước replace route;
+  Result chỉ tiêu thụ record còn hạn của đúng match, không tự tạo từ snapshot.
+  OnlineResult hiện bắt đầu snapshot=null, fetch riêng và chỉ nhận room/session
+  qua route: snapshot đầu tại Result được dùng khớp matchId với record, không
+  dùng làm bằng chứng freshness. Cold Result/reconnect không có record thì im lặng.
+- Acceptance: BOT Đấu lại → dispose session → Draft mới; online đợi cả hai rồi
+  Draft mới. Reset cue identity và bỏ mọi request của match cũ; thao tác liên tục
+  không dẫn đến âm thắng cũ hoặc double navigation.
+- Verification: integration BOT và online Board → Result (source unmount rồi
+  Result fetch) phát đúng một terminal cue; poll/remount/cold Result/reconnect
+  không phát lại. Background/mute/cancel giữa navigation, fetch chậm vượt2s,
+  stale load và đổi match đều bỏ cue cũ; fresh completion của match mới vẫn phát.
+  Giữ final transition/forfeit/rematch regressions; full BOT release → Result →
+  Draft; native online hai-party ở L. Scroll thấy đủ bốn
+  history và nút trên màn nhỏ; RM bỏ scale/stagger/petals nhưng giữ nội dung.
+- Files: FolkGameViews.tsx; BoardScreen.tsx/OnlineBoardScreen.tsx;
+  ResultScreen.tsx/OnlineResultScreen.tsx; runtime C; focused integration tests.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-K — Feedback mất và nối lại mạng (S; phụ thuộc: J)
+
+- Acceptance: connection-lost một lần khi vào reconnect thật; confirm một lần sau
+  reconnect + snapshot hợp lệ. Retry/countdown/expiry không phát lặp. Background
+  im lặng; resume seed lại trạng thái; room expired/forfeit không phát round-win.
+- Acceptance: opacity pulse hữu hạn theo lifecycle, RM tĩnh; giữ retry/backoff,
+  deadline, secure credentials, focus và localized reason hiện có.
+- Verification: ReconnectingScreen tests cho retry/expiry/cancel/recovery; audio
+  fake failure; native ngắt/nối mạng và Home trong lúc reconnect.
+- Files: ReconnectingScreen.tsx + test; FolkGameViews.tsx + test khi cần pulse.
+- Skills: vibe-build, frontend-ui-engineering, vibe-test.
+
+#### T29-L — Review và Android acceptance (M; phụ thuộc: A–K)
+
+- Acceptance: mobile tests/typecheck/changed-file ESLint, Expo Doctor và release
+  build/install PASS; core/server contract không đổi. Root verify nếu chạy phải
+  phân biệt baseline server lint unused guest đã biết với regression mới.
+- Acceptance: thực thi MOB-FEEDBACK-001–012, lưu video có audio thực nghe được hoặc
+  audio recording đối chiếu timestamps. Screenshot/mocked play call không chứng
+  minh tiếng đã phát. Log/evidence không chứa credentials/secret hand.
+- Acceptance: release mặc định/320×568dp/360×800dp, vi/en/font1.0/1.3, sound/rung
+  switches, RM giữa phiên, TalkBack, interruption và ten rematches. Đo trace/FPS
+  trên refresh rate ghi rõ, mục tiêu near60fps ở60Hz; so baseline T28, không khẳng
+  định FPS/độ trễ từ screenrecord hoặc cảm nhận. Player/listener/timer không tăng
+  theo rematch; một active voice và bundle audio ≤2MB.
+- Verification: native BOT + hai Android online đủ bốn lượt/đổi bài/rematch;
+  đo/capture audio onset so với action/phase, mục tiêu loaded tap ≤100ms nếu có
+  phép đo hợp lệ. Bluetooth/audio focus/ad return/đổi volume không làm game treo.
+  Thiếu máy thứ hai/audio capture/trace ghi BLOCKED/PARTIAL, không coi là PASS.
+- Files: tasks/test-result.md; tasks/evidence/android/<date>-game-feedback/;
+  tasks/todo.md và trạng thái T23/T25/T22/T14 chỉ theo evidence thực tế.
+- Skills: vibe-review, vibe-test; performance-optimization; native device runner.
+
+### Phase Checkpoints — T29
+
+| Checkpoint | Sau task | Bằng chứng để qua |
+|---|---|---|
+| CP29-1 — Âm và cài đặt | A–D | Pack thật, module release nghe được; mute/rung/default/persist/cleanup PASS |
+| CP29-2 — Bốn lượt | E–H | Control/drag/privacy/timing regression PASS; BOT bốn lượt sound + RM |
+| CP29-3 — Toàn game | I–K | Bảy state, Board → Result once-only, ad >4s/closure/recovery, Đấu lại/reconnect PASS scoped |
+| CP29-4 — Android evidence | L | Matrix thực chạy + audio/trace; mọi FAIL/BLOCKED được ghi, không đóng gate thiếu proof |
+
+Đây là các mốc review khi build từng phần; trong vibe-build all là progress
+markers. Người dùng đã giao agent triển khai; hiện ở build/review/native evidence.
+
+### Tradeoffs và điểm cần xác nhận bằng thử nghiệm
+
+- Một active sound giữ game dễ nghe; tap/tick có thể bị bỏ khi fanfare đang phát.
+  Chỉ thêm channel thứ hai khi native nghe thử cho thấy mất feedback quan trọng.
+- Expo Audio ~57.0.5 đã cài theo SDK và chạy release; native audio acceptance
+  còn cần tai nghe/audio focus/latency theo REPORT.
+  Không tự thêm expo-av/custom native bridge để né một vấn đề chưa được chứng minh.
+- ON sound/OFF vibration và 13 clip là mặc định của kế hoạch; có thể chỉnh mức âm/
+  timbre sau A/B nghe trên thiết bị mà không thay luật hay tăng surface cài đặt.
+- Bluetooth có độ trễ khác loa máy; đo riêng, không kéo chậm gameplay để bù audio.
+- Native Vibration chỉ bảo đảm rung cơ bản Android, không giả lập tactile iOS.
+  iOS audio session/VoiceOver/performance chưa được nghiệm thu trong đợt Android này.
+- T26-F/G và T25/T22/T14 còn mở; T29 evidence đóng góp đúng case, không tự đóng toàn dự án.
 
 `SPEC.md` là hợp đồng sản phẩm. File này chỉ ánh xạ thứ tự, phụ thuộc và
 checkpoint. Chi tiết kỹ thuật, file dự kiến, tiêu chí nghiệm thu và lệnh chạy

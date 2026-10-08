@@ -1,7 +1,7 @@
-export type ResultOutcome = 'WIN' | 'LOSS' | 'DRAW' | 'FORFEIT_WIN';
+export type ResultOutcome = 'WIN' | 'LOSS' | 'DRAW' | 'FORFEIT_WIN' | 'FORFEIT_LOSS';
 
 export function resultOutcome(playerScore: number, opponentScore: number, playerWon: boolean, completedRounds: number): ResultOutcome {
+  if (completedRounds < 4) return playerWon ? 'FORFEIT_WIN' : 'FORFEIT_LOSS';
   if (playerScore === opponentScore) return 'DRAW';
-  if (playerWon && completedRounds < 4) return 'FORFEIT_WIN';
   return playerWon ? 'WIN' : 'LOSS';
 }

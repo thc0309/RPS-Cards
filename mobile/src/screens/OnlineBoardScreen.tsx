@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { randomUUID } from 'expo-crypto';
 import { AppState } from 'react-native';
 import { acceptBoardSnapshot, useRoundPresentation } from '../game/board-round-presentation';
+import { useRoundFeedback } from '../ui/round-feedback';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { CardKind, RoomProjection } from '@rps-cards/game-core';
 import { FolkBoardView } from '../components/FolkGameViews';
@@ -35,17 +36,20 @@ export function OnlineBoardScreen() {
   const foreground = useRef(AppState.currentState === 'active');
   const [synced, setSynced] = useState(false);
   const [clockOffset, setClockOffset] = useState(0);
+  const clockOffsetRef = useRef(0);
+  const roundFeedback = useRoundFeedback();
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const reducedMotion = useReducedMotion();
   const remaining = useCountdownSeconds(snapshot?.deadlineAt === undefined ? undefined : snapshot.deadlineAt - clockOffset);
   const presentation = useRoundPresentation(snapshot?.phase ?? 'ROUND_SELECTION', snapshot?.round ?? 1, snapshot?.timeline, snapshot?.lastRound, snapshot?.own.seat ?? 'PLAYER_A', clockOffset, snapshot?.matchId);
   const receive = useCallback((next: RoomProjection, requestEpoch: number, startedAt: number) => {
     if (!mounted.current || !foreground.current || requestEpoch !== epoch.current || !acceptBoardSnapshot(snapshotRef.current, next)) return;
+    if (next.serverNow !== undefined) { clockOffsetRef.current = next.serverNow - (startedAt + Date.now()) / 2; setClockOffset(clockOffsetRef.current); }
+    if (next.matchId) roundFeedback.update({ matchId: next.matchId, round: next.round, phase: next.phase, lockedCardId: next.own.lockedCardId, seat: next.own.seat, synced: true, timeline: next.timeline, lastRound: next.lastRound, deadlineAt: next.deadlineAt, clockOffset: clockOffsetRef.current, terminalCue: next.result ? next.own.discards.length < 4 ? 'connection-lost' : next.result.winner === next.own.seat ? 'match-win' : 'match-loss' : undefined });
     snapshotRef.current = next;
     setSnapshot(next);
-    if (next.serverNow !== undefined) setClockOffset(next.serverNow - (startedAt + Date.now()) / 2);
     setSynced(true);
-  }, []);
+  }, [roundFeedback]);
 
   useEffect(() => {
     if (!roomCode || !sessionId) { router.replace('/rooms'); return; }

@@ -237,3 +237,39 @@ artifact scope, automation attempts, video samples and restored device settings.
 Previous work committed as `7e473cb`; effects/evidence committed separately.
 No new native online, two-device, TalkBack or FPS certification; T26/T25/T22/T14
 broad gates remain open. Existing server lint baseline unchanged.
+
+## 2026-10-07 — T29 whole-game feedback implementation and Android acceptance
+
+Implemented thirteen original audio cues, persisted Sound ON/Vibration OFF,
+RootLayout-owned fixed player pool/cancellation/terminal record, localized
+Customize switches and shared controls/Draft/round/Result/reconnect feedback.
+Ad display suppression now survives the4s room-entry timeout; terminal sound is
+consumed once for the matching fresh completion across Board→Result. Rematch
+resets old match before paper-slide and opens fresh Draft. Forfeit retains its
+reason and a neutral cue;0–0 is not presented as a fabricated DRAW.
+
+Mobile117 tests/34 suites, core13/server27 tests, whole typecheck, mobile lint and
+release arm64 builds PASS. Final geometry follow-up runs15 tests/2 suites. Native
+READY-before-listener race has RED→GREEN coverage; ten-rematch runtime test
+proves fixed13 players/no stale terminal/pending timer growth. Root server lint
+unused `guest` baseline remains; Doctor20/21 reports12 baseline SDK patch drifts.
+
+Samsung SM-S906E/Android16 native output-audio captures, BOT and one-phone online
+with scripted peer show scoped four-round/rematch/ad/transport recovery/forfeit
+behavior. Default and320dp/font1.3 vi/en Settings/persistence captured. Native
+Reconnecting text/background geometry was corrected after actual screenshots;
+final stock/QA APK hashes and later stress evidence are recorded in the report.
+QA used a generated-only loopback HTTP exception for the local server; stock
+network policy is restored afterward. Scripted peer is not a second phone.
+
+T29-L/CP29-4 remains PARTIAL, physical two-Android acceptance BLOCKED because the
+user has only one machine. Headphones/Bluetooth/audio focus, physical vibration,
+full TalkBack spoken/custom actions/once-only speech, complete geometry/RM/
+interruption fixtures and baseline-comparable trace analysis/≤100ms tap onset
+remain unverified. Final stock stress completes11 BOT matches/10 rematches at
+320dp/font1.3, normal then RM, and returns Home. Native60Hz mode,gfxinfo4251
+frames/370 janky(8.70%),p95=21ms;35s Perfetto saved, not60fps certification.
+360dp/en Settings with TalkBack exposes Sound/Vibration labels/checked states.
+[Detailed report](evidence/android/2026-10-07-game-feedback/REPORT.md) separates
+final stock evidence, intermediate/diagnostic recordings and inconclusive attempts.
+No T29 commit/push; T26-F/G and T25/T22/T14 broad gates remain open.

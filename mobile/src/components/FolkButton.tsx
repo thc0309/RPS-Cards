@@ -1,5 +1,8 @@
 import { Image, ImageBackground, Pressable, StyleSheet, Text, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
 import { folkAssets } from '../ui/folk-assets';
+import Animated from 'react-native-reanimated';
+import { useFeedback, type FeedbackCue } from '../ui/feedback';
+import { usePressMotion } from '../ui/motion';
 
 type FolkButtonProps = {
   readonly children: React.ReactNode;
@@ -9,22 +12,28 @@ type FolkButtonProps = {
   readonly disabled?: boolean;
   readonly accessibilityLabel?: string;
   readonly style?: StyleProp<ViewStyle>;
+  readonly cue?: FeedbackCue | null;
 };
 
-export function FolkButton({ children, variant = 'red', icon, onPress, disabled = false, accessibilityLabel, style }: FolkButtonProps) {
+export function FolkButton({ children, variant = 'red', icon, onPress, disabled = false, accessibilityLabel, style, cue = 'ui-tap' }: FolkButtonProps) {
   const source = variant === 'red' ? folkAssets.controls.redButton : folkAssets.controls.blueButton;
-  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[styles.pressable, style, disabled && styles.disabled]}>
+  const feedback = useFeedback();
+  const pressMotion = usePressMotion(disabled);
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : () => { if (cue !== null) feedback.play(cue); onPress(); }} onPressIn={pressMotion.onPressIn} onPressOut={pressMotion.onPressOut} style={[styles.pressable, style, disabled && styles.disabled]}>
+    <Animated.View style={[styles.buttonArt, pressMotion.style]}>
     <ImageBackground source={source} resizeMode="stretch" style={styles.background} imageStyle={styles.backgroundImage}>
       <View style={styles.content}>
         {icon ? <Image source={icon} resizeMode="contain" style={styles.icon} /> : null}
         <Text style={styles.label}>{children}</Text>
       </View>
     </ImageBackground>
+    </Animated.View>
   </Pressable>;
 }
 
 const styles = StyleSheet.create({
   pressable: { minHeight: 64, width: '100%', overflow: 'hidden' },
+  buttonArt: { flex: 1, width: '100%' },
   background: { flex: 1, justifyContent: 'center' },
   // Both button bitmaps have transparent vertical margins around the central 60%.
   backgroundImage: { height: '170%', top: '-35%', width: '100%' },
