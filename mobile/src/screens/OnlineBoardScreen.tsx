@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { randomUUID } from 'expo-crypto';
-import { AppState } from 'react-native';
+import { AppState, BackHandler } from 'react-native';
 import { acceptBoardSnapshot, useRoundPresentation } from '../game/board-round-presentation';
 import { useRoundFeedback } from '../ui/round-feedback';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { CardKind, RoomProjection } from '@rps-cards/game-core';
 import { FolkBoardView } from '../components/FolkGameViews';
-import { FolkSurface } from '../components/FolkSurface';
+import { FolkDialog } from '../components/FolkDialog';
+import { FolkLoadingView } from '../components/FolkLoadingView';
+import { deleteReconnectCredential } from '../security/reconnect-credential';
 import { createOnlineRoomClient } from '../game/colyseus-client';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
@@ -27,6 +29,8 @@ export function OnlineBoardScreen() {
   const [snapshot, setSnapshot] = useState<RoomProjection | null>(null);
   const [busy, setBusy] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [exitOpen, setExitOpen] = useState(false);
+  const setActiveRoom = useAppStore((state) => state.setActiveRoom);
   const snapshotRef = useRef<RoomProjection | null>(null);
   const busyRef = useRef(false);
   const lockAttemptRef = useRef(0);
@@ -106,14 +110,28 @@ export function OnlineBoardScreen() {
     }
   }, [client, receive, roomCode, router, sessionId, synced]);
 
-  if (!snapshot) return <FolkSurface background="woven">{null}</FolkSurface>;
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => { setExitOpen(true); return true; });
+    return () => subscription.remove();
+  }, []);
+  const leaveRoom = async () => {
+    setExitOpen(false);
+    mounted.current = false;
+    epoch.current += 1;
+    try { if (roomCode && sessionId) await client.leave(roomCode, sessionId); } catch { /* heartbeat expiry closes an unreachable room */ }
+    try { await deleteReconnectCredential(); } catch { /* nothing stored */ }
+    setActiveRoom(null);
+    router.replace('/');
+  };
+  if (!snapshot) return <FolkLoadingView label={text('loading')} />;
   const player = snapshot.own;
   const opponent = snapshot.players.find((item) => item.seat !== player.seat);
   const lastRound = snapshot.lastRound;
   const activeResult = snapshot.phase === 'ROUND_RESULT' && lastRound?.round === snapshot.round;
   const ownPlayed = player.seat === 'PLAYER_A' ? lastRound?.playerA : lastRound?.playerB;
   const opponentPlayed = player.seat === 'PLAYER_A' ? lastRound?.playerB : lastRound?.playerA;
-  const status = text(presentation.stage === 'prepare' ? 'roundPreparing' : presentation.stage === 'flip' ? 'roundFlipping' : (presentation.stage === 'outcome' || presentation.stage === 'complete') && presentation.outcome ? presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw' : presentation.stage === 'discard' ? 'roundDiscarding' : player.lockedCardId ? 'roundLocked' : opponent?.locked ? 'opponentLocked' : 'dragToLock');
+  const status = text(presentation.stage === 'prepare' ? 'roundPreparing' : presentation.stage === 'flip' ? 'roundFlipping' : (presentation.stage === 'outcome' || presentation.stage === 'complete') && presentation.outcome ? presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw' : presentation.stage === 'discard' ? 'roundDiscarding' : snapshot.phase === 'MATCH_RESULT' ? 'loading' : player.lockedCardId ? 'roundLocked' : opponent?.locked ? 'opponentLocked' : 'dragToLock');
 
-  return <FolkBoardView opponentName={text('onlineOpponent')} playerName={text('you')} scoreLabel={text('available')} opponentScore={(opponent?.score ?? 0) - (activeResult && !presentation.scoreVisible && presentation.outcome === 'LOSS' ? 1 : 0)} playerScore={player.score - (activeResult && !presentation.scoreVisible && presentation.outcome === 'WIN' ? 1 : 0)} opponentCardCount={opponent?.cardCount ?? 0} opponentLocked={opponent?.locked ?? false} presentation={presentation} statusLabel={status} summaryLabel={presentation.stage === 'selection' && presentation.outcome ? `${text('round')} ${lastRound?.round}: ${text(presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw')}` : undefined} opponentDiscards={opponent?.discards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== opponentPlayed?.cardId).map((card) => card.kind as CardKind) ?? []} playerDiscards={player.discards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== ownPlayed?.cardId).map((card) => card.kind as CardKind)} cards={player.hand.filter((card) => !card.used).map((card) => ({ id: card.id, kind: card.kind as CardKind }))} selectedCardId={selectedCardId} lockedCardId={player.lockedCardId} canLock={synced && snapshot.phase === 'ROUND_SELECTION'} busy={busy} reducedMotion={reducedMotion} lastRound={presentation.cards} remaining={remaining} cardBackLabel={text('cardBack')} discardLabel={text('discards')} lockLabel={text('lockCard')} waitingLabel={text('waiting')} selectedLabel={text('selected')} cardLabel={(kind) => label(kind, locale)} selectedLift={selectedLift(reducedMotion)} onSelect={setSelectedCardId} onLock={lock} />;
+  return <><FolkBoardView opponentName={text('onlineOpponent')} roundLabel={`${text('round')} ${Math.min(Math.max(snapshot.round, 1), 4)}/4`} exitLabel={text('exitMatch')} onExit={() => setExitOpen(true)} lockedHintLabel={text('swapHint')} slotHintLabel={text('tapToLock')} extraLabel={text('extraCard')} bannerLabels={{ win: text('roundBannerWin'), loss: text('roundBannerLoss'), draw: text('roundBannerDraw') }} playerName={text('you')} scoreLabel={text('lockHint')} opponentScore={(opponent?.score ?? 0) - (activeResult && !presentation.scoreVisible && presentation.outcome === 'LOSS' ? 1 : 0)} playerScore={player.score - (activeResult && !presentation.scoreVisible && presentation.outcome === 'WIN' ? 1 : 0)} opponentCardCount={opponent?.cardCount ?? 0} opponentLocked={opponent?.locked ?? false} presentation={presentation} statusLabel={status} summaryLabel={presentation.stage === 'selection' && presentation.outcome ? `${text('round')} ${lastRound?.round}: ${text(presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw')}` : undefined} opponentDiscards={opponent?.discards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== opponentPlayed?.cardId).map((card) => card.kind as CardKind) ?? []} playerDiscards={player.discards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== ownPlayed?.cardId).map((card) => card.kind as CardKind)} cards={player.hand.filter((card) => !card.used).map((card) => ({ id: card.id, kind: card.kind as CardKind, extra: card.id.endsWith('-extra') }))} selectedCardId={selectedCardId} lockedCardId={player.lockedCardId} canLock={synced && snapshot.phase === 'ROUND_SELECTION'} busy={busy} reducedMotion={reducedMotion} lastRound={presentation.cards} remaining={remaining} cardBackLabel={text('cardBack')} discardLabel={text('discards')} lockLabel={text('lockCard')} waitingLabel={text('waiting')} selectedLabel={text('selected')} cardLabel={(kind) => label(kind, locale)} selectedLift={selectedLift(reducedMotion)} onSelect={setSelectedCardId} onLock={lock} />
+    <FolkDialog visible={exitOpen} title={text('exitConfirmTitle')} body={text('exitConfirmOnline')} confirmLabel={text('leave')} cancelLabel={text('stay')} onCancel={() => setExitOpen(false)} onConfirm={() => void leaveRoom()} /></>;
 }

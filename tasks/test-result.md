@@ -273,3 +273,53 @@ frames/370 janky(8.70%),p95=21ms;35s Perfetto saved, not60fps certification.
 [Detailed report](evidence/android/2026-10-07-game-feedback/REPORT.md) separates
 final stock evidence, intermediate/diagnostic recordings and inconclusive attempts.
 No T29 commit/push; T26-F/G and T25/T22/T14 broad gates remain open.
+
+## 2026-10-09 — iPhone 8 Plus device check and iOS blockers
+
+iPhone 8 Plus/iOS 16.7.16 is Connected in the user-provided Xcode 26.1.1;
+Samsung S22 Plus/Android16 is available through ADB. Personal Team was selected
+by the user for the iOS build. No global Xcode selection or product signing
+configuration was changed.
+
+**BLOCKED:** iOS Release build fails in ExpoModulesJSI. Initial attempt has
+module-cache/database errors; retry with reduced outer concurrency has Swift
+6.2.1 compiler errors (`weak` immutable declarations and an ambiguous Date
+expression). There is no successful iPhone installation/launch or two-phone
+gameplay proof. Samsung setup recording is not completed gameplay acceptance.
+
+The user additionally reported the SDK UIScene launch requirement. Installed
+Expo57.0.14/generated AppDelegate still use the legacy application lifecycle
+and have no scene manifest. Official Expo supports opting into scenes from
+57.0.23 with expo-build-properties. This migration was not applied in the
+diagnostic phase. The originating device/build of the supplied runtime error
+was not identified; do not conflate it with the failed iPhone8 build attempts.
+
+[Native check report](evidence/native/2026-10-09-two-phones/REPORT.md) links the
+build evidence and required follow-up. T14/T26/T29 broad gates remain open.
+
+## 2026-10-09 — T30 Expo 57.0.27 / UIScene migration
+
+Updated Expo57.0.14 → 57.0.27, React Native0.86.2 → 0.86.3 and matching
+Expo packages using npm. Added expo-build-properties57.0.22 with official
+`ios.enableSceneSupport=true`. Non-clean iOS prebuild generates the Expo scene
+delegate manifest and factory provider; app no longer creates its own UIWindow.
+One hoisted RN0.86.3 resolves its peers; original server Colyseus/Zod versions
+are preserved. No game logic changes.
+
+Final core13/server27/mobile117 tests, workspace typecheck, mobile lint, npm ci
+dry-run and Android production Hermes export PASS. Doctor20/21: dependency
+alignment/duplication PASS; only the existing yarn.lock/package-lock.json warning
+remains. Used npm and preserved the user's untracked Yarn lock. CocoaPods116
+pods PASS. Unsigned generic iOS Release build using Xcode27/iOS27 SDK PASS;
+built app contains EXExpoAppSceneDelegate, correct bundle ID/minimum iOS16.4
+and embedded JS bundle. This is build/configuration proof, not launch proof.
+
+Audit against the prior lock at the same registry snapshot:81 →77 findings,
+including2 critical in both. New moderate coverage-tool reports are documented
+in the native report; no forced security upgrades applied.
+
+[Upgrade evidence](evidence/native/2026-10-09-two-phones/REPORT.md) contains final
+logs and built-app metadata. No new phone install/gameplay validation; the user
+cancelled iPhone8Plus testing. Existing Samsung APK does not validate the SDK
+update. T30 implementation/build complete; T14/T26/T29 broad native gates stay
+open. No commit/push or global Xcode/signing change.

@@ -3,7 +3,6 @@ export type GameErrorCode =
   | 'CARD_NOT_FOUND'
   | 'CARD_NOT_OWNED'
   | 'CARD_ALREADY_USED'
-  | 'PLAYER_ALREADY_LOCKED'
   | 'ROUND_NOT_READY'
   | 'EMPTY_HAND'
   | 'DUPLICATE_CARD_ID'

@@ -7,14 +7,15 @@ import { usePressMotion } from '../ui/motion';
 
 const art: Record<CardKind, ImageSourcePropType> = { ROCK: folkAssets.cards.rock, PAPER: folkAssets.cards.paper, SCISSORS: folkAssets.cards.scissors };
 
-export function FolkCard({ kind, label, selected, disabled, accessibilityActions, onAccessibilityAction, onPress, style }: { kind: CardKind; label: string; selected?: boolean; disabled?: boolean; accessibilityActions?: readonly AccessibilityActionInfo[]; onAccessibilityAction?: (event: AccessibilityActionEvent) => void; onPress?: (event: GestureResponderEvent) => void; style?: StyleProp<ViewStyle> }) {
+export function FolkCard({ kind, label, badge, selected, disabled, accessibilityActions, onAccessibilityAction, onPress, style }: { kind: CardKind; label: string; badge?: string; selected?: boolean; disabled?: boolean; accessibilityActions?: readonly AccessibilityActionInfo[]; onAccessibilityAction?: (event: AccessibilityActionEvent) => void; onPress?: (event: GestureResponderEvent) => void; style?: StyleProp<ViewStyle> }) {
   const feedback = useFeedback();
   const pressMotion = usePressMotion(disabled || !onPress);
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityActions={disabled ? undefined : accessibilityActions} onAccessibilityAction={disabled ? undefined : onAccessibilityAction} accessibilityState={{ selected, disabled }} disabled={disabled} onPress={!disabled && onPress ? (event) => { feedback.play('paper-select'); onPress(event); } : undefined} onPressIn={pressMotion.onPressIn} onPressOut={pressMotion.onPressOut} style={[styles.card, selected && styles.selected, disabled && styles.disabled, style]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={badge ? `${label}, ${badge}` : label} accessibilityActions={disabled ? undefined : accessibilityActions} onAccessibilityAction={disabled ? undefined : onAccessibilityAction} accessibilityState={{ selected, disabled }} disabled={disabled} onPress={!disabled && onPress ? (event) => { feedback.play('paper-select'); onPress(event); } : undefined} onPressIn={pressMotion.onPressIn} onPressOut={pressMotion.onPressOut} style={[styles.card, selected && styles.selected, disabled && styles.disabled, style]}>
     <Animated.View style={[styles.cardArt, pressMotion.style]}>
       <Image source={folkAssets.cards.frame} resizeMode="stretch" style={styles.frame} />
       <View style={styles.cardContent}><Image source={art[kind]} resizeMode="contain" style={styles.art} /><Text adjustsFontSizeToFit minimumFontScale={0.85} numberOfLines={1} style={styles.label}>{label}</Text></View>
     </Animated.View>
+    {badge ? <View testID="card-extra-badge" pointerEvents="none" style={styles.badge}><Text numberOfLines={1} style={styles.badgeText}>{badge}</Text></View> : null}
   </Pressable>;
 }
 
@@ -32,4 +33,6 @@ const styles = StyleSheet.create({
   art: { height: '52%', width: '80%' },
   label: { color: '#43291F', fontSize: 12, fontWeight: '800', marginTop: 3, textAlign: 'center' },
   back: { height: 90, width: 60 },
+  badge: { backgroundColor: '#8A241A', borderBottomLeftRadius: 8, borderColor: '#E3BD62', borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1, position: 'absolute', right: 0, top: 0 },
+  badgeText: { color: '#FFF0C6', fontSize: 10, fontWeight: '900' },
 });

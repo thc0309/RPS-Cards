@@ -1,10 +1,13 @@
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { FolkSurface } from './FolkSurface';
 import { FolkBoardView, FolkDraftView, FolkReconnectingView, FolkResultView, isCardCenterInsideDropTarget } from './FolkGameViews';
 import { FolkButton } from './FolkButton';
+import { FolkCard } from './FolkCard';
 import { getRoundPresentation } from '../game/board-round-presentation';
 import { folkAssets } from '../ui/folk-assets';
 const mockPlay = jest.fn();
+jest.mock('react-native-safe-area-context', () => ({ ...jest.requireActual('react-native-safe-area-context'), useSafeAreaInsets: () => ({ top: 24, bottom: 48, left: 0, right: 0 }) }));
 jest.mock('../ui/feedback', () => ({ useFeedback: () => ({ play: mockPlay, cancelScope: jest.fn() }) }));
 beforeEach(() => mockPlay.mockClear());
 
@@ -48,7 +51,7 @@ describe('FolkResultView', () => {
     expect(scoreBanner.props.source).toBe(folkAssets.controls.redButton);
     expect(firstRoundCopy.findAllByType(Text).map((node: { props: { children: unknown } }) => node.props.children)).toEqual([
       ['Round', ' ', 1],
-      'VS',
+      '✓',
     ]);
     expect(panel!.findAllByType(View).filter((node: { props: { testID?: string } }) => node.props.testID?.startsWith('result-round-copy-'))).toHaveLength(4);
   });
@@ -76,6 +79,17 @@ describe('FolkDraftView', () => {
     expect(onPick).toHaveBeenCalledTimes(1);
     expect(mockPlay).toHaveBeenCalledTimes(1);
   });
+  it('flips the drawn extra card in its slot and hides the timer', () => {
+    let tree: ReturnType<typeof create>;
+    act(() => {
+      tree = create(<FolkDraftView title="Draft" status="Your turn" instruction="Pick" timer={3} cardBackLabel="Card back" unavailableLabel="Unavailable" positions={[]} selectedPosition={2} disabled onPick={() => undefined} reveal={{ kind: 'PAPER', label: 'Paper', caption: 'Your extra card' }} />);
+    });
+    const find = (testID: string) => tree!.root.findAll((node: { props: { testID?: string } }) => node.props.testID === testID);
+    expect(find('draft-reveal-card').length).toBeGreaterThan(0);
+    expect(find('draft-timer')).toHaveLength(0);
+    expect(find('draft-slot-2')[0].props.accessibilityState).toEqual({ disabled: true, selected: true });
+    expect(tree!.root.findAllByType(Text).some((node: { props: { children?: unknown } }) => node.props.children === 'Your extra card')).toBe(true);
+  });
 });
 
 describe('FolkBoardView', () => {
@@ -91,14 +105,67 @@ describe('FolkBoardView', () => {
     const heldCard = tree!.root.findAll((node: { props: { testID?: string } }) => node.props.testID === 'board-locked-card')[0];
     const selectedCard = tree!.root.findAll((node: { props: { accessibilityActions?: unknown } }) => Array.isArray(node.props.accessibilityActions))[0];
     expect(StyleSheet.flatten(arena.props.style)).toEqual(expect.objectContaining({ flexDirection: 'column' }));
+    expect(StyleSheet.flatten(arena.props.style)).toEqual(expect.objectContaining({ aspectRatio: 1 }));
+    const arenaLayout = StyleSheet.flatten(arena.props.style);
+    expect(arenaLayout.width).toBe(arenaLayout.height);
+    const surface = tree!.root.findByType(FolkSurface);
+    const backgroundImage = tree!.root.findAllByType(Image).find((node: { props: { source?: unknown } }) => node.props.source === folkAssets.backgrounds.woven)!;
+    expect(backgroundImage.props.onLayout).toBeUndefined();
+    expect(tree!.root.findAllByType(View).some((node: { props: { onLayout?: unknown } }) => node.props.onLayout === surface.props.onLayout)).toBe(true);
+    act(() => { surface.props.onLayout({ nativeEvent: { layout: { height: 832 } } }); });
+    act(() => { arena.props.onLayout({ nativeEvent: { layout: { y: 220, height: 248 } } }); });
+    const backdrop = StyleSheet.flatten(backgroundImage.props.style);
+    expect(backdrop.top + backdrop.height / 2).toBe(24 + 220 + 124);
     expect(target).toBeDefined();
-    expect(StyleSheet.flatten(tree!.root.findByProps({ testID: 'board-player-score-column' }).props.style)).toEqual(expect.objectContaining({ width: '33.333%', alignItems: 'center' }));
+    expect(StyleSheet.flatten(tree!.root.findByProps({ testID: 'board-player-score-column' }).props.style)).toEqual(expect.objectContaining({ width: '32%', alignItems: 'center' }));
     expect(heldCard.props.accessibilityLabel).toBe('ROCK');
     expect(tree!.root.findAllByType(FolkButton)).toHaveLength(0);
 
     act(() => { selectedCard.props.onAccessibilityAction({ nativeEvent: { actionName: 'lock' } }); });
     expect(onLock).toHaveBeenCalledTimes(1);
     expect(onLock).toHaveBeenCalledWith('b');
+  });
+
+  it('locks by tapping the selected card again or the ready slot, and marks the extra card', () => {
+    const onLock = jest.fn();
+    const onSelect = jest.fn();
+    let tree: ReturnType<typeof create>;
+    act(() => {
+      tree = create(<FolkBoardView roundLabel="Round 2/4" extraLabel="Extra" slotHintLabel="Tap to lock" opponentName="Opponent" playerName="You" scoreLabel="Hint" opponentScore={0} playerScore={1} opponentCardCount={3} opponentDiscards={['ROCK']} playerDiscards={['PAPER']} cards={[{ id: 'a', kind: 'ROCK' }, { id: 'x-extra', kind: 'PAPER', extra: true }]} selectedCardId="a" lockedCardId={null} canLock busy={false} reducedMotion lastRound={null} remaining={4} cardBackLabel="Card back" discardLabel="Played" lockLabel="Lock" waitingLabel="Waiting" selectedLabel="Selected" cardLabel={(kind) => kind} selectedLift={0} onSelect={onSelect} onLock={onLock} />);
+    });
+    const byId = (testID: string) => tree!.root.findAll((node: { props: { testID?: string } }) => node.props.testID === testID)[0];
+    const cards = tree!.root.findAllByType(FolkCard);
+    act(() => { cards[0].props.onPress(); });
+    expect(onLock).toHaveBeenLastCalledWith('a');
+    act(() => { cards[1].props.onPress(); });
+    expect(onSelect).toHaveBeenLastCalledWith('x-extra');
+    expect(cards[1].props.badge).toBe('Extra');
+    expect(cards[0].props.badge).toBeUndefined();
+
+    const slot = byId('board-drop-target');
+    expect(byId('board-slot-hint').props.children).toBe('Tap to lock');
+    act(() => { slot.props.onPress(); });
+    expect(onLock).toHaveBeenCalledTimes(2);
+
+    expect(byId('board-round-indicator')).toBeDefined();
+    for (const rail of ['board-opponent-discards', 'board-player-discards']) {
+      // One revealed card plus three visible empty slots: the pile always shows four places.
+      expect(byId(rail).findAllByType(Image).filter((node: { props: { source?: unknown } }) => node.props.source === folkAssets.cards.frame)).toHaveLength(1);
+      expect(byId(rail).findAll((node: { type: unknown; props: { accessibilityElementsHidden?: boolean } }) => node.type === View && node.props.accessibilityElementsHidden === true)).toHaveLength(3);
+    }
+  });
+
+  it('shows a round banner only while the outcome is on screen', () => {
+    const base = { opponentName: 'Opponent', playerName: 'You', scoreLabel: 'Hint', opponentScore: 0, playerScore: 1, opponentCardCount: 3, opponentDiscards: [], playerDiscards: [], cards: [], selectedCardId: null, lockedCardId: null, canLock: false, busy: false, reducedMotion: true, lastRound: null, remaining: 0, cardBackLabel: 'Card back', discardLabel: 'Played', lockLabel: 'Lock', waitingLabel: 'Waiting', selectedLabel: 'Selected', cardLabel: (kind: string) => kind, selectedLift: 0, onSelect: () => undefined, onLock: () => undefined, bannerLabels: { win: 'Round won', loss: 'Round lost', draw: 'Round drawn' } } as const;
+    const timeline = { round: 1, revealAt: 1_000, completeAt: 3_100 };
+    const lastRound = { round: 1, outcomeForA: 'WIN' as const, playerA: { cardId: 'a', kind: 'ROCK' }, playerB: { cardId: 'b', kind: 'SCISSORS' } };
+    let tree: ReturnType<typeof create>;
+    act(() => { tree = create(<FolkBoardView {...base} presentation={getRoundPresentation('ROUND_RESULT', 1, timeline, lastRound, 1_900, 'PLAYER_A')} />); });
+    const banners = () => tree!.root.findAll((node: { props: { testID?: string } }) => node.props.testID === 'board-round-banner');
+    expect(banners().length).toBeGreaterThan(0);
+    expect(banners()[0].findByType(Text).props.children.join('')).toBe('✓ Round won  +1');
+    act(() => { tree!.update(<FolkBoardView {...base} presentation={getRoundPresentation('ROUND_SELECTION', 2, timeline, lastRound, 4_000, 'PLAYER_A')} />); });
+    expect(banners()).toHaveLength(0);
   });
 
   it('commits only when the dragged card center is inside the measured target', () => {

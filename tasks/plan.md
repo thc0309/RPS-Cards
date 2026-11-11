@@ -2,6 +2,20 @@
 
 Status: T01–T12 complete; Android remediation/evidence active; iOS validation deferred
 
+## T31 — Cân sân đấu và hai vòng tròn trên Android (2026-10-09)
+
+- Sửa `FolkBoardView` dùng chung BOT/online: vòng sáng tròn theo aspect ratio, hoa văn nền bám tâm arena đo từ layout và safe area; tăng phần BOT để cân màn hình, hàng bài BOT cùng trục huy hiệu điểm, compact giữ timer/hand/footer đủ chỗ.
+- Dùng ảnh nền hiện có và shared Surface để truyền style/measurement native; không chỉnh timer, luật, network hay authority animation.
+- Acceptance: hai vòng đồng tâm, các vòng/ô bài/điểm/bài/timer/footer không lẹm hay chồng ở Samsung mặc định và320×568dp/font1.3; kéo chốt, lật/thu bài, bốn lượt và Đấu lại hoạt động.
+- Verification: geometry RED→GREEN, focused13 tests/typecheck/lint PASS; Android Release và native checks đang chạy. Evidence: [T31](evidence/android/2026-10-09-board-balance/REPORT.md). Chưa commit; không đóng các gate T14/T22/T25/T26/T29 rộng hơn.
+
+## T30 — Expo SDK 57 patch và UIScene (2026-10-09)
+
+- Yêu cầu: cập nhật Expo 57. Dự án đã ở 57.0.14; nâng lên 57.0.27, React Native 0.86.3 và các package tương thích SDK bằng npm.
+- Bật `expo-build-properties` với `ios.enableSceneSupport=true`; prebuild không clean để giữ cấu hình native/signing. Dùng scene delegate chính thức của Expo, không tạo delegate riêng.
+- Acceptance: dependency không còn lệch SDK/duplicate React Native; tests, typecheck, lint mobile và native scene configuration đạt; build iOS bằng compiler tương thích. Tách build khỏi bằng chứng launch/gameplay.
+- Verification: 13 core/27 server/117 mobile tests, whole typecheck, lint mobile và Android production bundle PASS. Một React Native0.86.3, scene delegate/factory/window ownership đã xác minh; npm ci dry-run PASS. Doctor20/21 chỉ còn `yarn.lock` cùng `package-lock.json`; giữ file người dùng và dùng npm. CocoaPods116 pods và unsigned iOS Release bằng Xcode27 PASS; built app có scene manifest và JS bundle, giữ bundle ID/minimum iOS16.4. Evidence tại [native report](evidence/native/2026-10-09-two-phones/REPORT.md). Chưa launch/kiểm thử bản mới trên máy thật; người dùng bỏ qua iPhone 8 Plus. T30 implementation/build hoàn tất; không đóng các gate T14/T26/T29 và không commit/push.
+
 ## T27 — Đấu lại quay về chọn bài (2026-10-07)
 
 - BOT: Result gọi `disposeLocalSession()` rồi replace `/draft`; Draft hiện có tạo lượt chọn mới và adapter mới, không tái dùng bộ bài cũ.
@@ -15,7 +29,7 @@ Status: T01–T12 complete; Android remediation/evidence active; iOS validation 
 - Native phát hiện footer chữ lớn bị cắt; chỉnh bố trí compact và tỷ lệ card, kiểm tra lại ở320×568dp/font1.3. Motion thường/Reduced Motion qua outcome → lượt mới, footer đủ; settings đã restore.
 - Verification final: 59 tests/24 suites mobile PASS, mobile typecheck/lint/diff PASS; release arm64 build/install PASS. Default + small có bốn lượt, default rematch trở lại Draft; compact cuối có smoke normal/reduced một lượt mỗi case. [REPORT](evidence/android/2026-10-07-outcome-effects/REPORT.md) phân biệt bằng chứng trước/sau compact và các gate còn mở.
 
-Current requested work is T29 implementation and scoped Android validation.
+Current requested work is the SDK 57 patch and scene migration (T30).
 Product code A–K is implemented; T29-L/native acceptance remains partial before
 refreshing T22 and the Android portion of T14.
 Existing T26/T25 native gaps remain open. iOS remains required for the later

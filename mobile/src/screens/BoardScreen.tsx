@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
+import { BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { CardKind } from '@rps-cards/game-core';
 import { FolkBoardView } from '../components/FolkGameViews';
+import { FolkDialog } from '../components/FolkDialog';
+import { botNameKey } from '../game/bot-labels';
+import { pickBotPersona } from '../game/bot-persona';
 import { useRoundPresentation } from '../game/board-round-presentation';
 import { useRoundFeedback } from '../ui/round-feedback';
 import { LocalMatchAdapter } from '../game/local-match-adapter';
-import { getLocalDraftResult, getLocalMatchAdapter, setLocalMatchAdapter } from '../game/local-session';
+import { disposeLocalSession, getLocalDraftResult, getLocalMatchAdapter, setLocalMatchAdapter } from '../game/local-session';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
 import { useCountdownSeconds } from '../ui/countdown';
@@ -21,6 +25,7 @@ export function BoardScreen() {
   const [adapter, setAdapter] = useState(() => getLocalMatchAdapter());
   const [snapshot, setSnapshot] = useState(() => adapter?.getState() ?? null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [exitOpen, setExitOpen] = useState(false);
   const roundFeedback = useRoundFeedback();
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const reducedMotion = useReducedMotion();
@@ -35,7 +40,8 @@ export function BoardScreen() {
     if (!adapter) {
       const draft = getLocalDraftResult();
       if (!draft) { router.replace('/draft'); return; }
-      const created = new LocalMatchAdapter(draft.hands, (max) => Math.floor(Math.random() * max));
+      const random = (max: number) => Math.floor(Math.random() * max);
+      const created = new LocalMatchAdapter(draft.hands, random, { botPersona: pickBotPersona(random) });
       setLocalMatchAdapter(created);
       setAdapter(created);
       receive(created.getState());
@@ -53,6 +59,11 @@ export function BoardScreen() {
     setSelectedCardId(null);
   }, [adapter]);
 
+  useEffect(() => {
+    // Android back asks before abandoning a running match.
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => { setExitOpen(true); return true; });
+    return () => subscription.remove();
+  }, []);
   if (!adapter || !snapshot) return null;
   const player = snapshot.match.players.PLAYER_A;
   const opponent = snapshot.match.players.PLAYER_B;
@@ -60,7 +71,9 @@ export function BoardScreen() {
   const opponentDiscards = snapshot.match.discards.filter((card) => card.playerId === 'PLAYER_B');
   const lastRound = snapshot.match.lastRound;
   const activeResult = snapshot.match.phase === 'ROUND_RESULT' && lastRound?.round === snapshot.match.round;
-  const status = text(presentation.stage === 'prepare' ? 'roundPreparing' : presentation.stage === 'flip' ? 'roundFlipping' : (presentation.stage === 'outcome' || presentation.stage === 'complete') && presentation.outcome ? presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw' : presentation.stage === 'discard' ? 'roundDiscarding' : player.lockedCardId ? 'roundLocked' : opponent.lockedCardId ? 'opponentLocked' : 'dragToLock');
+  const status = text(presentation.stage === 'prepare' ? 'roundPreparing' : presentation.stage === 'flip' ? 'roundFlipping' : (presentation.stage === 'outcome' || presentation.stage === 'complete') && presentation.outcome ? presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw' : presentation.stage === 'discard' ? 'roundDiscarding' : snapshot.match.phase === 'MATCH_RESULT' ? 'loading' : player.lockedCardId ? 'roundLocked' : opponent.lockedCardId ? 'opponentLocked' : 'dragToLock');
 
-  return <FolkBoardView opponentName="BOT" playerName={text('you')} scoreLabel={text('available')} opponentScore={opponent.score - (activeResult && !presentation.scoreVisible && lastRound.outcomeForA === 'LOSS' ? 1 : 0)} playerScore={player.score - (activeResult && !presentation.scoreVisible && lastRound.outcomeForA === 'WIN' ? 1 : 0)} opponentCardCount={opponent.cards.filter((card) => !card.used).length} opponentLocked={opponent.lockedCardId !== null} presentation={presentation} statusLabel={status} summaryLabel={presentation.stage === 'selection' && presentation.outcome ? `${text('round')} ${lastRound?.round}: ${text(presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw')}` : undefined} opponentDiscards={opponentDiscards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== lastRound.playerB.cardId).map((card) => card.kind)} playerDiscards={playerDiscards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== lastRound.playerA.cardId).map((card) => card.kind)} cards={player.cards.filter((card) => !card.used)} selectedCardId={selectedCardId} lockedCardId={player.lockedCardId} canLock={snapshot.match.phase === 'ROUND_SELECTION'} busy={false} reducedMotion={reducedMotion} lastRound={presentation.cards} remaining={remaining} cardBackLabel={text('cardBack')} discardLabel={text('discards')} lockLabel={text('lockCard')} waitingLabel={text('waiting')} selectedLabel={text('selected')} cardLabel={(kind) => cardLabel(kind, locale)} selectedLift={selectedLift(reducedMotion)} onSelect={setSelectedCardId} onLock={lock} />;
+  const botName = snapshot.botPersona ? text(botNameKey[snapshot.botPersona]) : 'BOT';
+  return <><FolkBoardView opponentName={botName} roundLabel={`${text('round')} ${Math.min(snapshot.match.round, 4)}/4`} exitLabel={text('exitMatch')} onExit={() => setExitOpen(true)} lockedHintLabel={text('swapHint')} slotHintLabel={text('tapToLock')} extraLabel={text('extraCard')} bannerLabels={{ win: text('roundBannerWin'), loss: text('roundBannerLoss'), draw: text('roundBannerDraw') }} playerName={text('you')} scoreLabel={text('lockHint')} opponentScore={opponent.score - (activeResult && !presentation.scoreVisible && lastRound.outcomeForA === 'LOSS' ? 1 : 0)} playerScore={player.score - (activeResult && !presentation.scoreVisible && lastRound.outcomeForA === 'WIN' ? 1 : 0)} opponentCardCount={opponent.cards.filter((card) => !card.used).length} opponentLocked={opponent.lockedCardId !== null} presentation={presentation} statusLabel={status} summaryLabel={presentation.stage === 'selection' && presentation.outcome ? `${text('round')} ${lastRound?.round}: ${text(presentation.outcome === 'WIN' ? 'roundWin' : presentation.outcome === 'LOSS' ? 'roundLoss' : 'roundDraw')}` : undefined} opponentDiscards={opponentDiscards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== lastRound.playerB.cardId).map((card) => card.kind)} playerDiscards={playerDiscards.filter((card) => !(activeResult && !presentation.discardsVisible) || card.cardId !== lastRound.playerA.cardId).map((card) => card.kind)} cards={player.cards.filter((card) => !card.used).map((card) => ({ id: card.id, kind: card.kind, extra: card.id.endsWith('-extra') }))} selectedCardId={selectedCardId} lockedCardId={player.lockedCardId} canLock={snapshot.match.phase === 'ROUND_SELECTION'} busy={false} reducedMotion={reducedMotion} lastRound={presentation.cards} remaining={remaining} cardBackLabel={text('cardBack')} discardLabel={text('discards')} lockLabel={text('lockCard')} waitingLabel={text('waiting')} selectedLabel={text('selected')} cardLabel={(kind) => cardLabel(kind, locale)} selectedLift={selectedLift(reducedMotion)} onSelect={setSelectedCardId} onLock={lock} />
+    <FolkDialog visible={exitOpen} title={text('exitConfirmTitle')} body={text('exitConfirmBot')} confirmLabel={text('leave')} cancelLabel={text('stay')} onCancel={() => setExitOpen(false)} onConfirm={() => { setExitOpen(false); disposeLocalSession(); router.replace('/'); }} /></>;
 }

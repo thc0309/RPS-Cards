@@ -1,4 +1,4 @@
-import { ImageBackground, StyleSheet, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
+import { ImageBackground, StyleSheet, View, type ImageSourcePropType, type ImageStyle, type StyleProp, type ViewStyle, type ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { folkAssets } from '../ui/folk-assets';
 
@@ -7,17 +7,21 @@ type FolkSurfaceProps = {
   readonly background?: 'village' | 'paper' | 'woven';
   readonly style?: StyleProp<ViewStyle>;
   readonly contentStyle?: StyleProp<ViewStyle>;
+  readonly backgroundImageStyle?: StyleProp<ImageStyle>;
+  readonly onLayout?: ViewProps['onLayout'];
 };
 
-export function FolkSurface({ children, background = 'paper', style, contentStyle }: FolkSurfaceProps) {
+export function FolkSurface({ children, background = 'paper', style, contentStyle, backgroundImageStyle, onLayout }: FolkSurfaceProps) {
   const source: ImageSourcePropType = folkAssets.backgrounds[background];
-  return <ImageBackground source={source} resizeMode="cover" style={[styles.surface, style]} imageStyle={styles.image}>
+  return <View onLayout={onLayout} style={[styles.surface, style]}>
+    <ImageBackground source={source} resizeMode="cover" style={styles.surface} imageStyle={[styles.image, backgroundImageStyle]}>
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.content}>
       <ImageBackground source={folkAssets.backgrounds.paper} resizeMode="repeat" style={[styles.content, contentStyle]} imageStyle={styles.paperTexture}>
         {children}
       </ImageBackground>
     </SafeAreaView>
-  </ImageBackground>;
+    </ImageBackground>
+  </View>;
 }
 
 const styles = StyleSheet.create({

@@ -3,6 +3,8 @@ import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'r
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { CustomizeSheet } from '../components/CustomizeSheet';
+import { HowToPlaySheet } from '../components/HowToPlaySheet';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FolkButton } from '../components/FolkButton';
 import { FolkSurface } from '../components/FolkSurface';
 import { translate } from '../i18n';
@@ -12,6 +14,7 @@ import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming
 import { useFeedback } from '../ui/feedback';
 import { useReducedMotion } from '../ui/motion';
 
+const HOW_TO_SEEN_KEY = 'rps-cards.how-to-seen';
 export function HomeScreen() {
   const router = useRouter();
   const locale = useAppStore((state) => state.locale);
@@ -20,6 +23,7 @@ export function HomeScreen() {
   const reducedMotion = useReducedMotion();
   const entrance = useSharedValue(0);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
   const { width, height } = useWindowDimensions();
   const logoWidth = Math.min(width - 32, 380);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
@@ -36,6 +40,17 @@ export function HomeScreen() {
   }, [entrance, hasHydrated, reducedMotion]);
   const entranceStyle = useAnimatedStyle(() => ({ opacity: reducedMotion ? 1 : 0.85 + entrance.value * 0.15, transform: [{ translateY: reducedMotion ? 0 : (1 - entrance.value) * 8 }] }));
 
+  useEffect(() => {
+    if (!hasHydrated) return;
+    let active = true;
+    // First launch explains the rules once; afterwards the button on Home reopens them.
+    void AsyncStorage.getItem(HOW_TO_SEEN_KEY).then((seen) => {
+      if (!active || seen) return;
+      setHowToOpen(true);
+      void AsyncStorage.setItem(HOW_TO_SEEN_KEY, '1').catch(() => undefined);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [hasHydrated]);
   if (!hasHydrated) {
     return <View style={styles.loading}><Text>{text('loading')}</Text></View>;
   }
@@ -49,12 +64,17 @@ export function HomeScreen() {
           <FolkButton cue="paper-slide" icon={folkAssets.icons.bot} accessibilityLabel={text('playBot')} onPress={() => router.push('/draft')}>{text('playBot')}</FolkButton>
           <FolkButton cue="paper-slide" variant="blue" icon={folkAssets.icons.joinDoor} accessibilityLabel={text('onlineRooms')} onPress={() => router.push('/rooms')}>{text('onlineRooms')}</FolkButton>
         </View>
-        <View style={styles.guestBadge}><Text style={styles.guestText}>{text('guest')}</Text></View>
-        <Pressable accessibilityRole="button" accessibilityLabel={text('customize')} style={styles.customize} onPress={() => { feedback.play('ui-tap'); setCustomizeOpen(true); }}>
-          <Text style={styles.customizeText}>{text('customize')} · {text('defaultTheme')}</Text>
-        </Pressable>
+        <View style={styles.secondary}>
+          <Pressable testID="home-how-to-play" accessibilityRole="button" accessibilityLabel={text('howToPlay')} style={styles.pill} onPress={() => { feedback.play('ui-tap'); setHowToOpen(true); }}>
+            <Text style={styles.pillText}>? {text('howToPlay')}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={text('customize')} style={styles.pill} onPress={() => { feedback.play('ui-tap'); setCustomizeOpen(true); }}>
+            <Text style={styles.pillText}>⚙ {text('settings')}</Text>
+          </Pressable>
+        </View>
       </Animated.ScrollView>
       <CustomizeSheet visible={customizeOpen} onClose={() => setCustomizeOpen(false)} />
+      <HowToPlaySheet visible={howToOpen} onClose={() => setHowToOpen(false)} />
     </FolkSurface>
   );
 }
@@ -67,6 +87,9 @@ const styles = StyleSheet.create({
   actions: { gap: 12, marginTop: 8, maxWidth: 340, width: '100%' },
   customize: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingHorizontal: 12 },
   customizeText: { color: '#FFF0C6', fontSize: 14, fontWeight: '800', textAlign: 'center', textDecorationLine: 'underline', textShadowColor: '#43291F', textShadowOffset: { height: 1, width: 1 }, textShadowRadius: 2 },
+  secondary: { flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 6, maxWidth: 340, width: '100%' },
+  pill: { alignItems: 'center', backgroundColor: '#E5B957', borderColor: '#6F3C1F', borderRadius: 16, borderWidth: 2, flex: 1, justifyContent: 'center', minHeight: 50, paddingHorizontal: 10 },
+  pillText: { color: '#43291F', fontSize: 15, fontWeight: '900', textAlign: 'center' },
   guestBadge: { backgroundColor: '#E5B957', borderColor: '#6F3C1F', borderRadius: 14, borderWidth: 2, minHeight: 38, minWidth: 132, paddingHorizontal: 20, paddingVertical: 7 },
   guestText: { color: '#43291F', fontSize: 14, fontWeight: '900', textAlign: 'center' },
 });

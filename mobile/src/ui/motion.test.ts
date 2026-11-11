@@ -1,8 +1,11 @@
 import React from 'react';
 import { AccessibilityInfo } from 'react-native';
-import Animated, { getAnimatedStyle } from 'react-native-reanimated';
+import Animated, { getAnimatedStyle as readAnimatedStyle } from 'react-native-reanimated';
 import { act, create } from 'react-test-renderer';
 import { selectedLift, usePressMotion } from './motion';
+
+// The type entry point resolves the web stub of this helper; tests run the native one, which takes the node.
+const getAnimatedStyle = readAnimatedStyle as unknown as (component: unknown) => { transform?: unknown; opacity?: unknown };
 
 test('reduced motion preserves selection without lift choreography', () => {
   expect(selectedLift(true)).toBe(0);

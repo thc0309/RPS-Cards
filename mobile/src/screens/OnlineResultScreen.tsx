@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { CardKind, RoomProjection } from '@rps-cards/game-core';
 import { FolkResultLoadingView, FolkResultView } from '../components/FolkGameViews';
 import { createOnlineRoomClient } from '../game/colyseus-client';
+import { interstitialGate } from '../ads/interstitial-gate';
 import { translate } from '../i18n';
 import { deleteReconnectCredential } from '../security/reconnect-credential';
 import { useAppStore } from '../store/app-store';
@@ -60,10 +61,11 @@ export function OnlineResultScreen() {
   const playerScore = snapshot.result.scores[snapshot.own.seat];
   const opponentScore = opponent ? snapshot.result.scores[opponent.seat] : 0;
   const rematchReady = snapshot.rematchReady?.includes(snapshot.own.seat) ?? false;
+  const opponentLeft = snapshot.opponentLeft === true;
   const history = pairRoundHistory(snapshot.own.discards.map((card) => card.kind as CardKind), opponent?.discards.map((card) => card.kind as CardKind) ?? []);
   const outcome = resultOutcome(playerScore, opponentScore, snapshot.result.winner === snapshot.own.seat, history.length);
   const rematch = async () => {
-    if (busyRef.current || rematchReady) return;
+    if (busyRef.current || rematchReady || opponentLeft) return;
     busyRef.current = true;
     if (snapshot.matchId) feedback.leaveResult(snapshot.matchId);
     feedback.setMatch(null);
@@ -76,9 +78,11 @@ export function OnlineResultScreen() {
     try { await client.leave(params.roomCode!, params.sessionId!); } catch { /* heartbeat expiry closes an unreachable room */ }
     await deleteReconnectCredential();
     setActiveRoom(null);
+    // The ad sits after the match, never in front of entering a room.
+    try { await interstitialGate.attemptInterstitial(); } catch { /* an ad failure never blocks leaving */ }
     feedback.play('paper-slide');
     router.replace('/');
   };
 
-  return <FolkResultView celebrateWin={terminalCue === 'match-win'} title={text('result')} outcome={outcome === 'DRAW' ? text('draw') : outcome === 'FORFEIT_WIN' ? `${text('youWin')} · ${text('opponentLeft')}` : outcome === 'WIN' ? text('youWin') : text('opponentWins')} scoreLabel={text('score')} playerScore={playerScore} opponentScore={opponentScore} roundLabel={text('round')} history={history} cardLabel={(kind) => cardLabel(kind, locale)} primaryLabel={rematchReady ? text('rematchWaiting') : text('rematch')} secondaryLabel={text('home')} primaryDisabled={busy || rematchReady} onPrimary={() => void rematch()} onSecondary={() => void leave()} />;
+  return <FolkResultView celebrateWin={terminalCue === 'match-win'} title={text('result')} outcome={outcome === 'DRAW' ? text('draw') : outcome === 'FORFEIT_WIN' ? text('youWin') : outcome === 'WIN' ? text('youWin') : text('youLose')} scoreLabel={text('score')} playerScore={playerScore} opponentScore={opponentScore} roundLabel={text('round')} history={history} cardLabel={(kind) => cardLabel(kind, locale)} hint={outcome === 'FORFEIT_WIN' ? text('opponentLeft') : undefined} columnLabels={{ player: text('you'), opponent: text('onlineOpponent') }} roundMarks={{ win: text('roundBannerWin'), loss: text('roundBannerLoss'), draw: text('roundBannerDraw') }} primaryLabel={opponentLeft ? text('opponentLeft') : rematchReady ? text('rematchWaiting') : text('rematch')} secondaryLabel={text('home')} primaryDisabled={busy || rematchReady || opponentLeft} onPrimary={() => void rematch()} onSecondary={() => void leave()} />;
 }

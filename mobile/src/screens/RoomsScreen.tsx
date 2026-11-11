@@ -3,7 +3,7 @@ import { AppState, Image, ImageBackground, KeyboardAvoidingView, Platform, Press
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
-import { createInterstitialGate } from '../ads/interstitial-gate';
+import * as Clipboard from 'expo-clipboard';
 import { createOnlineRoomClient } from '../game/colyseus-client';
 import { createRoomEntryFlow, type RoomEntryError } from '../game/room-entry';
 import { translate } from '../i18n';
@@ -16,6 +16,8 @@ import { FolkBackButton, FolkTitle } from '../components/FolkChrome';
 import { useFeedback } from '../ui/feedback';
 import { useReducedMotion } from '../ui/motion';
 
+// Entering a room is never gated by an ad; the interstitial runs after a finished online match.
+const entryWithoutAd = { attemptInterstitial: async () => 'no-fill' as const };
 export function RoomsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ error?: RoomEntryError }>();
@@ -33,7 +35,7 @@ export function RoomsScreen() {
   const [busy, setBusy] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<ReconnectCredential | null>(null);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const flow = useMemo(() => createRoomEntryFlow(createOnlineRoomClient(), createInterstitialGate(), {
+  const flow = useMemo(() => createRoomEntryFlow(createOnlineRoomClient(), entryWithoutAd, {
     saveCredential: (credential) => saveReconnectCredential(credential),
     openLobby: (roomCode, sessionId) => {
       if (!mounted.current) return;
@@ -80,13 +82,13 @@ export function RoomsScreen() {
         <ImageBackground source={folkAssets.controls.paperPanel} resizeMode="stretch" style={styles.panel} imageStyle={styles.panelImage}>
           <Animated.View testID="room-entry-highlight" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.highlight, highlightStyle]} />
           <View style={styles.panelContent}>
-          <Text style={styles.sectionTitle}>{text('currentRoom')}</Text>
+          {currentRoom ? <Text style={styles.sectionTitle}>{text('currentRoom')}</Text> : null}
           {currentRoom ? (
             <Pressable accessibilityRole="button" accessibilityLabel={`${text('currentRoom')}: ${currentRoom.roomCode}`} style={styles.currentRoom} onPress={() => { mounted.current = false; feedback.play('paper-slide'); router.replace({ pathname: '/reconnecting', params: { roomCode: currentRoom.roomCode, sessionId: currentRoom.sessionId } }); }}>
               <Text style={styles.currentRoomLabel}>{text('currentRoom')}</Text><Text style={styles.currentRoomCode}>{currentRoom.roomCode}</Text>
             </Pressable>
           ) : (
-            <View style={styles.emptyState}><Image source={folkAssets.decorations.gate} resizeMode="contain" style={styles.gate} /><Text style={styles.empty}>{text('noCurrentRoom')}</Text></View>
+            <Image accessibilityElementsHidden importantForAccessibility="no" source={folkAssets.decorations.gate} resizeMode="contain" style={[styles.gate, styles.emptyState]} />
           )}
           <FolkButton icon={folkAssets.icons.plus} accessibilityLabel={text('createRoom')} disabled={busy} onPress={() => { setError(null); void run(flow.createRoom()); }}>{text('createRoom')}</FolkButton>
           <View style={styles.divider}><View style={styles.line} /><Text style={styles.or}>{text('or')}</Text><View style={styles.line} /></View>
@@ -95,6 +97,7 @@ export function RoomsScreen() {
             <TextInput accessibilityLabel={text('roomCodePlaceholder')} autoCapitalize="characters" autoCorrect={false} multiline={false} maxLength={5} style={[styles.input, code.length > 0 && styles.codeInput]} value={code} onChangeText={(value) => { setCode(value.toUpperCase()); setError(null); }} />
             {code.length === 0 ? <Text testID="room-code-placeholder" accessible={false} pointerEvents="none" adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={1} style={styles.inputPlaceholder}>{text('roomCodePlaceholder')}</Text> : null}
           </ImageBackground>
+          <Pressable testID="room-code-paste" accessibilityRole="button" accessibilityLabel={text('paste')} style={styles.paste} onPress={() => { feedback.play('ui-tap'); void Clipboard.getStringAsync().then((value) => { if (mounted.current) { setCode(value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5)); setError(null); } }).catch(() => undefined); }}><Text style={styles.pasteText}>{text('paste')}</Text></Pressable>
           <FolkButton variant="blue" icon={folkAssets.icons.joinDoor} accessibilityLabel={text('joinRoom')} disabled={busy} onPress={() => { setError(null); void run(flow.joinRoom(code)); }}>{text('joinRoom')}</FolkButton>
           {errorText ? <Text accessibilityRole="alert" style={styles.error}>{errorText}</Text> : <Text style={styles.hint}>{text('privateRoomHint')}</Text>}
           </View>
@@ -113,7 +116,7 @@ const styles = StyleSheet.create({
   back: { left: 0, position: 'absolute', zIndex: 2 },
   panel: { marginTop: 4, maxWidth: 360, width: '100%' },
   highlight: { borderColor: '#D6A73A', borderRadius: 12, borderWidth: 2, bottom: 24, left: '10%', position: 'absolute', right: '10%', top: 24 },
-  panelContent: { alignItems: 'center', paddingHorizontal: '12%', paddingVertical: 42 },
+  panelContent: { alignItems: 'center', paddingBottom: 54, paddingHorizontal: '12%', paddingTop: 42 },
   panelImage: { height: '100%', opacity: 0.96, width: '100%' },
   sectionTitle: { color: '#8A241A', fontSize: 20, fontWeight: '900', marginBottom: 4, textAlign: 'center' },
   emptyState: { alignItems: 'center', marginBottom: 12 },
@@ -130,6 +133,8 @@ const styles = StyleSheet.create({
   input: { color: '#43291F', fontSize: 16, minHeight: 70, paddingHorizontal: 20, paddingVertical: 14, textAlign: 'center', width: '100%' },
   codeInput: { letterSpacing: 4 },
   inputPlaceholder: { color: '#805B3C', fontSize: 16, left: 20, position: 'absolute', right: 20, textAlign: 'center' },
-  error: { color: '#A63D2F', fontWeight: '700', marginTop: 8, textAlign: 'center' },
-  hint: { color: '#55733C', fontSize: 12, marginTop: 8, textAlign: 'center' },
+  error: { color: '#A63D2F', fontSize: 14, fontWeight: '800', marginTop: 8, textAlign: 'center' },
+  paste: { alignItems: 'center', justifyContent: 'center', marginBottom: 6, marginTop: -4, minHeight: 44, paddingHorizontal: 18 },
+  pasteText: { color: '#8A241A', fontSize: 15, fontWeight: '900', textDecorationLine: 'underline' },
+  hint: { color: '#3F6B35', fontSize: 14, fontWeight: '700', marginTop: 8, textAlign: 'center' },
 });

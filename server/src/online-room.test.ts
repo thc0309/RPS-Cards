@@ -327,3 +327,55 @@ test('prepare/result cleanup cancels stale callbacks and late timer catches up o
     }
   }
 });
+
+class QueueTimer implements OnlineTimerApi {
+  now = 0;
+  private queue: { at: number; callback: () => void }[] = [];
+  setTimeout(callback: () => void, delayMs: number): unknown { const entry = { at: this.now + delayMs, callback }; this.queue.push(entry); return entry; }
+  clearTimeout(handle: unknown): void { this.queue = this.queue.filter((entry) => entry !== handle); }
+  advance(ms: number): void {
+    const end = this.now + ms;
+    for (;;) {
+      this.queue.sort((a, b) => a.at - b.at);
+      const next = this.queue[0];
+      if (!next || next.at > end) break;
+      this.queue.shift();
+      this.now = next.at;
+      next.callback();
+    }
+    this.now = end;
+  }
+}
+
+test('leaving after a finished match keeps the real winner', () => {
+  const timer = new QueueTimer();
+  const room = new OnlineRoomController('ABCD2', { timer, now: () => timer.now, reconnectTimeoutMs: 10_000_000 });
+  room.join('a');
+  room.join('b');
+  timer.advance(200_000);
+  const finished = room.projection('a');
+  assert.equal(finished.phase, 'MATCH_RESULT');
+  const winner = finished.result!.winner;
+  const winnerSession = winner === 'PLAYER_A' ? 'a' : 'b';
+  const loserSession = winnerSession === 'a' ? 'b' : 'a';
+  room.leave(winnerSession);
+  const after = room.projection(loserSession);
+  assert.deepEqual(after.result, finished.result);
+  assert.equal(after.opponentLeft, true);
+  assert.equal(after.own.discards.length, 4);
+  room.dispose();
+});
+
+test('a forfeit during draft ends the draft and reports a match result', () => {
+  const room = new OnlineRoomController('ABCD3');
+  room.join('a');
+  room.join('b');
+  room.leave('b');
+  const projection = room.projection('a');
+  assert.equal(projection.phase, 'MATCH_RESULT');
+  assert.equal(projection.own.draft, null);
+  assert.equal(projection.result?.winner, 'PLAYER_A');
+  assert.equal(projection.opponentLeft, true);
+  assert.equal(projection.deadlineAt, undefined);
+  room.dispose();
+});

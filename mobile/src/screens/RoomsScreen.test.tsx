@@ -46,7 +46,9 @@ beforeEach(() => {
 test('renders empty and saved-room states without changing the layout contract', async () => {
   let empty: ReturnType<typeof create>;
   await act(async () => { empty = create(<RoomsScreen />); });
-  expect(textNodes(empty!, 'Chưa có phòng hiện tại').length).toBeGreaterThan(0);
+  // The empty state no longer spends the best spot announcing that nothing is there.
+  expect(textNodes(empty!, 'Chưa có phòng hiện tại')).toHaveLength(0);
+  expect(textNodes(empty!, 'Phòng hiện tại')).toHaveLength(0);
 
   mockCredential = { roomCode: 'ABCDE', sessionId: 'guest-1', reconnectToken: 'token' };
   let saved: ReturnType<typeof create>;

@@ -59,6 +59,7 @@ export interface RoomProjection {
   readonly lastRound?: { readonly outcomeForA: RoundOutcome; readonly round: number; readonly playerA: { readonly cardId: string; readonly kind: string }; readonly playerB: { readonly cardId: string; readonly kind: string } } | null;
   readonly result?: { readonly winner: 'PLAYER_A' | 'PLAYER_B'; readonly scores: Readonly<Record<'PLAYER_A' | 'PLAYER_B', number>> } | null;
   readonly rematchReady?: readonly ('PLAYER_A' | 'PLAYER_B')[];
+  readonly opponentLeft?: boolean;
 }
 
 export function validateClientAction(value: unknown): ClientAction {
@@ -76,14 +77,10 @@ export function validateClientAction(value: unknown): ClientAction {
     throw new ProtocolError('INVALID_MESSAGE', 'action envelope is invalid');
   }
   const body = payload as Record<string, unknown>;
-  if (type === 'DRAFT_PICK' && (expectedPhase === 'DRAFT_PLAYER_A' || expectedPhase === 'DRAFT_PLAYER_B') && round === 0 && Number.isInteger(body.position) && (body.position as number) >= 0 && (body.position as number) <= 3 && Object.keys(body).every((key) => key === 'position')) return { type, operationId, expectedPhase, expectedRound: 0, payload: { position: body.position as number } };
+  if (type === 'DRAFT_PICK' && (expectedPhase === 'DRAFT_PLAYER_A' || expectedPhase === 'DRAFT_PLAYER_B') && round === 0 && Number.isInteger(body.position) && (body.position as number) >= 0 && (body.position as number) <= 2 && Object.keys(body).every((key) => key === 'position')) return { type, operationId, expectedPhase, expectedRound: 0, payload: { position: body.position as number } };
   if (type === 'LOCK_CARD' && expectedPhase === 'ROUND_SELECTION' && round >= 1 && typeof body.cardId === 'string' && body.cardId.length > 0 && body.cardId.length <= 80 && Object.keys(body).every((key) => key === 'cardId')) return { type, operationId, expectedPhase, expectedRound: round, payload: { cardId: body.cardId } };
   if (type === 'REMATCH_READY' && expectedPhase === 'MATCH_RESULT' && round <= 4 && typeof body.ready === 'boolean' && Object.keys(body).every((key) => key === 'ready')) return { type, operationId, expectedPhase, expectedRound: round, payload: { ready: body.ready } };
   throw new ProtocolError('INVALID_MESSAGE', 'action payload is invalid');
-}
-
-export function normalizeCatalogId(value: unknown): 'folk_default' {
-  return value === 'folk_default' ? 'folk_default' : 'folk_default';
 }
 
 export const MVP_RULESET: RulesetVersion = RULESET_VERSION;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Image, ImageBackground, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -67,7 +67,7 @@ export function LobbyScreen() {
     return () => { active = false; clearInterval(handle); subscription.remove(); cancelAnimation(flash); };
   }, [client, feedback, flash, params.roomCode, params.sessionId, router]);
   useEffect(() => {
-    if (snapshot && snapshot.phase !== 'WAITING') router.replace({ pathname: '/draft', params: { roomCode: params.roomCode, sessionId: params.sessionId } });
+    if (snapshot && snapshot.phase !== 'WAITING') router.replace({ pathname: snapshot.phase === 'MATCH_RESULT' ? '/result' : '/draft', params: { roomCode: params.roomCode, sessionId: params.sessionId } });
   }, [params.roomCode, params.sessionId, router, snapshot]);
   if (!params.roomCode || !params.sessionId) return null;
   const leave = async () => {
@@ -84,20 +84,23 @@ export function LobbyScreen() {
         <ImageBackground source={folkAssets.board.scrollPanel} resizeMode="stretch" style={styles.invitation}>
           <Text style={styles.label}>{text('roomCode')}</Text>
           <Text selectable adjustsFontSizeToFit numberOfLines={1} style={styles.code}>{params.roomCode}</Text>
+          <View style={styles.shareRow}>
           <Pressable accessibilityRole="button" accessibilityLabel={text('copyCode')} style={styles.copy} onPress={() => { feedback.play('ui-tap'); void Clipboard.setStringAsync(params.roomCode ?? '').catch(() => undefined); }}><Image source={folkAssets.icons.copy} style={styles.copyIcon} /><Text style={styles.copyText}>{text('copyCode')}</Text></Pressable>
+          <Pressable testID="lobby-share" accessibilityRole="button" accessibilityLabel={text('shareCode')} style={styles.copy} onPress={() => { feedback.play('ui-tap'); void Share.share({ message: `${text('shareMessage')} ${params.roomCode ?? ''}` }).catch(() => undefined); }}><Text style={styles.copyText}>↗ {text('shareCode')}</Text></Pressable>
+          </View>
         </ImageBackground>
         <View style={styles.players}>
           <ImageBackground source={folkAssets.controls.paperPanel} resizeMode="stretch" style={styles.playerPanel}>
             <Text style={styles.playerTitle}>{text('you')}</Text>
             <View style={styles.avatar}><Image source={folkAssets.decorations.lion} resizeMode="contain" style={styles.avatarArt} /></View>
-            <Text style={styles.ready}>✓ {text('ready')}</Text>
+            <Text style={styles.ready}>✓ {text('joined')}</Text>
           </ImageBackground>
           <View pointerEvents="none" style={styles.vs}><Text style={styles.vsText}>VS</Text></View>
           <ImageBackground source={folkAssets.controls.paperPanel} resizeMode="stretch" style={styles.playerPanel}>
             <Animated.View testID="lobby-opponent-highlight" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.highlight, highlightStyle]} />
             <Text style={styles.playerTitle}>{text('onlineOpponent')}</Text>
             <View style={[styles.avatar, styles.opponentAvatar]}><Text style={styles.silhouette}>{(snapshot?.players.length ?? 1) > 1 ? '●' : '?'}</Text></View>
-            <Text accessibilityLiveRegion="polite" style={styles.waiting}>{(snapshot?.players.length ?? 1) > 1 ? `✓ ${text('ready')}` : text('waitingOpponent')}</Text>
+            <Text accessibilityLiveRegion="polite" style={styles.waiting}>{(snapshot?.players.length ?? 1) > 1 ? `✓ ${text('joined')}` : text('waitingOpponent')}</Text>
           </ImageBackground>
         </View>
         <Text accessibilityLiveRegion="polite" style={styles.status}>{text('playersReady')}: {snapshot?.players.length ?? 1} / 2</Text>
@@ -117,6 +120,7 @@ const styles = StyleSheet.create({
   label: { color: '#8A241A', fontSize: 14, fontWeight: '800', textAlign: 'center' },
   code: { color: '#A63D2F', fontSize: 34, fontWeight: '900', letterSpacing: 7, marginTop: 2, textAlign: 'center', width: '100%' },
   copy: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', gap: 6, justifyContent: 'center', minHeight: 44, paddingHorizontal: 12 },
+  shareRow: { flexDirection: 'row', justifyContent: 'center' },
   copyIcon: { height: 24, width: 24 },
   copyText: { color: '#8A241A', fontWeight: '800' },
   players: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: -4, maxWidth: '100%', width: 332 },

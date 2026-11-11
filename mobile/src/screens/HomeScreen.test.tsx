@@ -10,6 +10,7 @@ const mockFeedback = { welcome: mockWelcome, cancelScope: mockCancelScope, play:
 jest.mock('../ui/feedback', () => ({ useFeedback: () => mockFeedback }));
 jest.mock('../store/app-store', () => ({ useAppStore: (select: (state: { locale: string; hasHydrated: boolean }) => unknown) => select({ locale: 'vi', hasHydrated: mockHasHydrated }) }));
 jest.mock('../components/CustomizeSheet', () => ({ CustomizeSheet: () => null }));
+jest.mock('../components/HowToPlaySheet', () => ({ HowToPlaySheet: () => null }));
 beforeEach(() => { mockHasHydrated = true; mockWelcome.mockClear(); mockCancelScope.mockClear(); });
 
 test('keeps Home actions localized and accessible', () => {
@@ -17,7 +18,7 @@ test('keeps Home actions localized and accessible', () => {
   act(() => { tree = create(<HomeScreen />); });
 
   const buttons = tree!.root.findAll((node) => node.props.accessibilityRole === 'button');
-  expect([...new Set(buttons.map((button) => button.props.accessibilityLabel))]).toEqual(['Chơi với bot', 'Phòng online', 'Tùy chỉnh']);
+  expect([...new Set(buttons.map((button) => button.props.accessibilityLabel))]).toEqual(['Chơi với bot', 'Phòng online', 'Cách chơi', 'Tùy chỉnh']);
   expect(buttons.every((button) => button.props.accessibilityRole === 'button')).toBe(true);
 });
 

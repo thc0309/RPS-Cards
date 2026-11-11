@@ -31,11 +31,28 @@ test('join rejects a session id that already belongs to the room', () => {
   directory.get(created.roomCode)?.dispose();
 });
 
-test('leave evicts a closed room from the directory', () => {
+test('a room survives one player leaving and is evicted once both are gone', () => {
   const directory = new RoomDirectory();
   const host = directory.create();
   const guest = directory.join(host.roomCode, 'guest-b');
   directory.leave(host.roomCode, host.sessionId);
+  // The remaining player still reaches the room and sees the forfeit result.
+  const remaining = directory.get(host.roomCode)?.projection(guest.sessionId);
+  assert.equal(remaining?.phase, 'MATCH_RESULT');
+  assert.equal(remaining?.opponentLeft, true);
+  assert.equal(directory.validate(host.roomCode), 'expired');
+  directory.leave(host.roomCode, guest.sessionId);
   assert.equal(directory.get(host.roomCode), undefined);
   assert.equal(directory.validate(host.roomCode), 'expired');
+});
+
+test('abandoned rooms are swept so the directory cannot fill up', () => {
+  let now = 1_000;
+  const directory = new RoomDirectory({ now: () => now, reconnectTimeoutMs: 25_000 });
+  const abandoned = directory.create();
+  now += 24_000;
+  assert.equal(directory.validate(abandoned.roomCode), 'available');
+  now += 2_000;
+  assert.equal(directory.validate(abandoned.roomCode), 'expired');
+  assert.equal(directory.get(abandoned.roomCode), undefined);
 });

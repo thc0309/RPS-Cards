@@ -10,7 +10,7 @@ const MAX_IN_MEMORY_ROOMS = 1_024;
 
 export class RoomDirectory {
   private readonly rooms = new Map<string, OnlineRoomController>();
-  constructor(private readonly options: { readonly reconnectTimeoutMs?: number; readonly draftSelectionTimeoutMs?: number; readonly roundSelectionTimeoutMs?: number } = {}) {}
+  constructor(private readonly options: { readonly reconnectTimeoutMs?: number; readonly draftSelectionTimeoutMs?: number; readonly roundSelectionTimeoutMs?: number; readonly now?: () => number } = {}) {}
 
   create(): { readonly roomCode: string; readonly sessionId: string; readonly reconnectToken: string } {
     this.evictClosedRooms();
@@ -67,7 +67,7 @@ export class RoomDirectory {
     const room = this.rooms.get(roomCode);
     if (!room) return;
     room.leave(sessionId);
-    if (room.isClosed) this.removeRoom(roomCode);
+    if (room.isClosed && !room.hasLivePlayers) this.removeRoom(roomCode);
   }
 
   get(roomCode: string): OnlineRoomController | undefined {
@@ -77,7 +77,8 @@ export class RoomDirectory {
 
   private evictClosedRooms(): void {
     for (const [roomCode, room] of this.rooms) {
-      if (room.isClosed) this.removeRoom(roomCode);
+      room.sweep();
+      if (room.isClosed && !room.hasLivePlayers) this.removeRoom(roomCode);
     }
   }
 

@@ -107,5 +107,14 @@ export function ReconnectingScreen() {
       feedback.cancelScope('reconnecting');
     };
   }, [deadline, feedback, params.roomCode, params.sessionId, router, setActiveRoom]);
-  return <FolkReconnectingView title={text('reconnecting')} body={text('reconnectingBody')} remaining={remaining} statusStyle={statusStyle} />;
+  const leave = async () => {
+    try {
+      const credential = await readReconnectCredential();
+      if (credential) await createOnlineRoomClient().leave(credential.roomCode, credential.sessionId);
+    } catch { /* the reservation expires on its own when the server is unreachable */ }
+    try { await deleteReconnectCredential(); } catch { /* nothing stored */ }
+    setActiveRoom(null);
+    router.replace('/rooms');
+  };
+  return <FolkReconnectingView title={text('reconnecting')} body={text('reconnectingBody')} remaining={remaining} statusStyle={statusStyle} leaveLabel={text('leaveRoom')} onLeave={() => void leave()} />;
 }

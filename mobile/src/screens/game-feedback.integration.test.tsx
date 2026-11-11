@@ -88,7 +88,9 @@ test('online accepted forfeit survives separate Result fetch; duplicates and col
   expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/result', params: { roomCode: 'ABCDE', sessionId: 'a' } });
   const before = totalPlays();
   await act(async () => { tree.update(<FeedbackProvider><OnlineResultScreen /></FeedbackProvider>); });
-  expect(tree.root.findByType(FolkResultView).props.outcome).toBe('You win · Opponent left the room');
+  // The stamp stays short; the reason sits in its own line under the history.
+  expect(tree.root.findByType(FolkResultView).props.outcome).toBe('You win');
+  expect(tree.root.findByType(FolkResultView).props.hint).toBe('Opponent left the room');
   expect(tree.root.findByType(FolkResultView).props.history).toEqual([]);
   expect(tree.root.findByType(FolkResultView).props.celebrateWin).toBe(false);
   expect(totalPlays() - before).toBe(1);

@@ -43,6 +43,8 @@ export class OnlineRoomController {
   readonly roomCode: string;
   get playerCount(): number { return this.players.size; }
   get isClosed(): boolean { return this.closed; }
+  /** A closed room is kept until every seat has left, so the remaining player still sees the forfeit result. */
+  get hasLivePlayers(): boolean { return [...this.players.values()].some((player) => !player.reservationExpired); }
   get reconnectTimeoutMs(): number { return this.reservationMs; }
   get idempotencySize(): number { return this.operations.size; }
 
@@ -189,17 +191,25 @@ export class OnlineRoomController {
     this.players.set(sessionId, { ...record, reservationExpired: true });
     const opponent = [...this.players.values()].find((player) => player.seat !== record.seat && !player.reservationExpired);
     if (!opponent) this.closed = true;
-    if (opponent) {
-      const scores = this.match?.result?.scores ?? {
+    this.revision += 1;
+    // A finished match keeps its real result; leaving afterwards is not a forfeit.
+    if (this.match?.result && !this.forfeitResult) return;
+    if (opponent && !this.forfeitResult) {
+      const scores = {
         PLAYER_A: this.match?.players.PLAYER_A.score ?? 0,
         PLAYER_B: this.match?.players.PLAYER_B.score ?? 0,
       };
       this.forfeitResult = { winner: opponent.seat, scores };
       this.match = this.match ? { ...this.match, phase: 'MATCH_RESULT', result: this.forfeitResult } : null;
+      this.draft = null;
     }
     this.timeline = null;
-    this.revision += 1;
     this.clearDeadline();
+  }
+
+  /** Expires players that stopped polling so abandoned rooms can be evicted. */
+  sweep(): void {
+    this.expireInactivePlayers();
   }
 
   private expireInactivePlayers(): void {
@@ -247,7 +257,7 @@ export class OnlineRoomController {
     const current = this.players.get(seat === 'PLAYER_A' ? this.sessionFor('PLAYER_A') : this.sessionFor('PLAYER_B'));
     if (!current) throw new ProtocolError('UNAUTHORIZED_SEAT', 'seat is not connected');
     for (const [sessionId, player] of this.players) if (player.seat === seat) this.players.set(sessionId, { ...player, ready });
-    if ([...this.players.values()].length === 2 && [...this.players.values()].every((player) => player.ready)) {
+    if ([...this.players.values()].length === 2 && [...this.players.values()].every((player) => player.ready && !player.reservationExpired)) {
       for (const [sessionId, player] of this.players) this.players.set(sessionId, { ...player, ready: false });
       this.startDraft();
     }
@@ -370,6 +380,7 @@ export class OnlineRoomController {
       lastRound: this.match?.lastRound ? { outcomeForA: this.match.lastRound.outcomeForA, round: this.match.lastRound.round, playerA: this.match.lastRound.playerA, playerB: this.match.lastRound.playerB } : null,
       result: this.forfeitResult ?? this.match?.result ?? null,
       rematchReady: [...this.players.values()].filter((player) => player.ready).map((player) => player.seat),
+      opponentLeft: [...this.players.values()].some((player) => player.seat !== ownSeat && player.reservationExpired),
     };
     return this.deadlineAt === null ? projection : { ...projection, deadlineAt: this.deadlineAt };
   }

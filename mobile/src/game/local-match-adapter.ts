@@ -10,6 +10,7 @@ import {
   type MatchState,
   type RandomInt,
 } from '@rps-cards/game-core';
+import { chooseBotCard, type BotPersonaId } from './bot-persona';
 import { createDeadline, type Deadline } from './deadline';
 
 export const ROUND_TIMEOUT_MS = 15_000;
@@ -22,6 +23,7 @@ export interface LocalMatchState {
   readonly deadline: Deadline | null;
   readonly selectedCardId: string | null;
   readonly acceptedOperations: number;
+  readonly botPersona: BotPersonaId | null;
 }
 
 export interface MatchTimerApi {
@@ -48,13 +50,15 @@ export class LocalMatchAdapter {
   private readonly initialHands: Readonly<Record<'PLAYER_A' | 'PLAYER_B', readonly CardInstance[]>>;
   private readonly timer: MatchTimerApi;
   private readonly now: () => number;
+  private readonly botPersona: BotPersonaId | null;
 
   constructor(
     hands: Readonly<Record<'PLAYER_A' | 'PLAYER_B', readonly CardInstance[]>>,
     private readonly randomInt: RandomInt,
-    options: { readonly now?: () => number; readonly timer?: MatchTimerApi } = {},
+    options: { readonly now?: () => number; readonly timer?: MatchTimerApi; readonly botPersona?: BotPersonaId | null } = {},
   ) {
     this.initialHands = hands;
+    this.botPersona = options.botPersona ?? null;
     this.now = options.now ?? (() => Date.now());
     this.timer = options.timer ?? defaultTimer;
     this.match = createMatch(hands);
@@ -67,7 +71,7 @@ export class LocalMatchAdapter {
   }
 
   getState(): LocalMatchState {
-    return { timeline: this.timeline, matchId: `local-${this.matchId}`, match: this.match, deadline: this.deadline, selectedCardId: this.selectedCardId, acceptedOperations: this.operation };
+    return { timeline: this.timeline, matchId: `local-${this.matchId}`, match: this.match, deadline: this.deadline, selectedCardId: this.selectedCardId, acceptedOperations: this.operation, botPersona: this.botPersona };
   }
 
   lockPlayerCard(cardId: string): void {
@@ -99,7 +103,10 @@ export class LocalMatchAdapter {
   private lockBotCard(): void {
     if (this.match.phase !== 'ROUND_SELECTION' || this.match.players.PLAYER_B.lockedCardId !== null) return;
     const available = this.match.players.PLAYER_B.cards.filter((card) => !card.used);
-    const card = available[this.randomInt(available.length)];
+    // Personas read revealed cards only; the player's pending lock stays hidden from the bot.
+    const card = this.botPersona
+      ? chooseBotCard(this.botPersona, { hand: available, opponentPlayed: this.match.discards.filter((played) => played.playerId === 'PLAYER_A') }, this.randomInt)
+      : available[this.randomInt(available.length)];
     if (card) this.accept(() => lockCard(this.match, 'PLAYER_B', card.id));
   }
 

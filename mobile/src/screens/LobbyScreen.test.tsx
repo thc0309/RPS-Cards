@@ -55,7 +55,7 @@ test('renders authoritative waiting and ready opponent states', async () => {
   mockSnapshot.mockResolvedValue(projection(2));
   let ready: ReturnType<typeof create>;
   await act(async () => { ready = create(<LobbyScreen />); });
-  expect(hasText(ready!, '✓ Đã sẵn sàng')).toBe(true);
+  expect(hasText(ready!, '✓ Đã vào phòng')).toBe(true);
   expect(mockFeedback.play).not.toHaveBeenCalled();
   act(() => { ready!.unmount(); });
 });
@@ -78,7 +78,7 @@ test('confirms an opponent arrival once, while identical polls stay silent', asy
   mockSnapshot.mockResolvedValue(projection(2));
   await act(async () => { jest.advanceTimersByTime(1000); });
   expect(mockFeedback.play.mock.calls.filter(([cue]) => cue === 'confirm')).toHaveLength(1);
-  expect(hasText(tree!, '✓ Đã sẵn sàng')).toBe(true);
+  expect(hasText(tree!, '✓ Đã vào phòng')).toBe(true);
   await act(async () => { jest.advanceTimersByTime(3000); });
   expect(mockFeedback.play.mock.calls.filter(([cue]) => cue === 'confirm')).toHaveLength(1);
   act(() => { tree!.unmount(); });

@@ -2,6 +2,10 @@
 
 Status: T01–T12 complete; Android remediation/evidence is active; iOS validation deferred
 
+## T30 — Expo SDK 57 patch / UIScene (2026-10-09)
+
+- [x] [T30](plan.md#t30--expo-sdk-57-patch-và-uiscene-2026-10-09) — Expo57.0.27/RN0.86.3 và scene lifecycle; 157 tests/typecheck/lint mobile/Android bundle, npm ci dry-run, unsigned iOS Release Xcode27 và built scene manifest PASS. Doctor20/21 chỉ còn hai lockfile. Chưa test bản mới trên máy thật; bỏ qua iPhone 8 Plus, không đóng các gate gameplay rộng hơn.
+
 Chi tiết của mỗi task nằm trong `tasks/detail-tasks/`; T26 nằm trong [kế hoạch sân đấu](plan.md#t26-round-flow). Chỉ đánh dấu hoàn tất sau
 khi acceptance criteria và verification trong file tương ứng đã có evidence.
 
