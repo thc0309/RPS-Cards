@@ -1,7 +1,8 @@
 import React from 'react';
 import { Image, ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FolkSurface } from './FolkSurface';
-import { FolkBoardView, FolkDraftView, FolkReconnectingView, FolkResultView, isCardCenterInsideDropTarget } from './FolkGameViews';
+import { FolkBoardView as BoardView, FolkDraftView, FolkReconnectingView, FolkResultView, isCardCenterInsideDropTarget } from './FolkGameViews';
 import { FolkButton } from './FolkButton';
 import { FolkCard } from './FolkCard';
 import { getRoundPresentation } from '../game/board-round-presentation';
@@ -13,6 +14,11 @@ beforeEach(() => mockPlay.mockClear());
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { act, create } = require('react-test-renderer');
+
+// Gesture Handler 3 requires the same root context as the running app.
+function FolkBoardView(props: React.ComponentProps<typeof BoardView>) {
+  return <GestureHandlerRootView><BoardView {...props} /></GestureHandlerRootView>;
+}
 
 describe('FolkResultView', () => {
   it('keeps four result rows inside the scroll artwork', () => {

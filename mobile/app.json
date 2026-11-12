@@ -30,6 +30,9 @@
         {
           "ios": {
             "enableSceneSupport": true
+          },
+          "android": {
+            "extraProguardRules": "# WorkManager Room database is instantiated reflectively at startup.\n-keep class androidx.work.impl.WorkDatabase_Impl { public <init>(); }"
           }
         }
       ],
@@ -52,7 +55,8 @@
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }
-      ]
+      ],
+      "expo-asset"
     ]
   }
 }
