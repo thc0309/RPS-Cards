@@ -55,3 +55,10 @@ expo-env.d.ts
 *.ipa
 *.apk
 *.aab
+
+# Test evidence: screenshots, videos, traces and dumps stay local.
+# Only the written reports (*.md) are versioned.
+tasks/evidence/**
+!tasks/evidence/**/
+!tasks/evidence/**/*.md
+tasks/review/sdk58-logs/
