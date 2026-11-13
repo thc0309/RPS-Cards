@@ -9,7 +9,7 @@ import { FolkBoardView } from '../components/FolkGameViews';
 import { FolkDialog } from '../components/FolkDialog';
 import { FolkLoadingView } from '../components/FolkLoadingView';
 import { deleteReconnectCredential } from '../security/reconnect-credential';
-import { createOnlineRoomClient } from '../game/colyseus-client';
+import { createRoomClient, roomEntryRoute } from '../game/room-client';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
 import { useCountdownSeconds } from '../ui/countdown';
@@ -25,7 +25,7 @@ export function OnlineBoardScreen() {
   const roomCode = params.roomCode;
   const sessionId = params.sessionId;
   const locale = useAppStore((state) => state.locale);
-  const client = useMemo(() => createOnlineRoomClient(), []);
+  const client = useMemo(() => createRoomClient(), []);
   const [snapshot, setSnapshot] = useState<RoomProjection | null>(null);
   const [busy, setBusy] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function OnlineBoardScreen() {
   }, [roundFeedback]);
 
   useEffect(() => {
-    if (!roomCode || !sessionId) { router.replace('/rooms'); return; }
+    if (!roomCode || !sessionId) { router.replace(roomEntryRoute()); return; }
     mounted.current = true;
     let pollingEpoch: number | null = null;
     const poll = async () => {

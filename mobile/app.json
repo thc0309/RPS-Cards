@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Bao Búa Kéo",
     "slug": "mobile",
     "version": "1.0.0",
     "scheme": "rpscards",
@@ -9,17 +9,33 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.stagoo.rpscards"
+      "bundleIdentifier": "com.stagoo.rpscards",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Kết nối với người chơi cùng Wi-Fi hoặc điểm phát sóng.",
+        "NSBonjourServices": [
+          "_baobuakeo._tcp"
+        ]
+      }
     },
     "android": {
       "package": "com.stagoo.rpscards",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#8A241A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CHANGE_WIFI_MULTICAST_STATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,11 +58,18 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "androidAppId": "ca-app-pub-1376884976470739~4801145274",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
       ],
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#8A241A",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
       [
         "expo-audio",
         {
@@ -56,7 +79,17 @@
           "enableBackgroundRecording": false
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "./plugins/with-release-signing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép quét mã QR để vào phòng LAN.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      "./plugins/with-lan-network"
     ]
   }
 }

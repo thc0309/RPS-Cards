@@ -18,8 +18,17 @@ test('keeps Home actions localized and accessible', () => {
   act(() => { tree = create(<HomeScreen />); });
 
   const buttons = tree!.root.findAll((node) => node.props.accessibilityRole === 'button');
-  expect([...new Set(buttons.map((button) => button.props.accessibilityLabel))]).toEqual(['Chơi với bot', 'Phòng online', 'Cách chơi', 'Tùy chỉnh']);
+  expect([...new Set(buttons.map((button) => button.props.accessibilityLabel))]).toEqual(['Chơi với bot', 'Chơi LAN', 'Cách chơi', 'Tùy chỉnh']);
   expect(buttons.every((button) => button.props.accessibilityRole === 'button')).toBe(true);
+});
+
+test('keeps the Internet entry available only when explicitly enabled', () => {
+  process.env.EXPO_PUBLIC_ONLINE_ENABLED = '1';
+  let tree: ReturnType<typeof create>;
+  act(() => { tree = create(<HomeScreen />); });
+  expect(tree!.root.findAll((node) => node.props.accessibilityLabel === 'Phòng online').length).toBeGreaterThan(0);
+  act(() => { tree!.unmount(); });
+  delete process.env.EXPO_PUBLIC_ONLINE_ENABLED;
 });
 
 test('requests the root-owned welcome only after preferences hydrate', () => {

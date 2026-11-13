@@ -2,6 +2,10 @@
 
 Status: T01–T12 complete; Android remediation/evidence is active; iOS validation deferred
 
+## REQ-LAN-20261113 — LAN rooms + QR (2026-11-13)
+
+- [ ] [LAN rooms + QR](review/REQ-LAN-20261113.md) — implementation, core13/server26/mobile153, typecheck/lint, arm64 release/debug-sign builds PASS; two-phone controlled gameplay evidence in progress. [Report](review/2026-11-13-lan-report.md).
+
 ## T30 — Expo SDK 57 patch / UIScene (2026-10-09)
 
 - [x] [T30](plan.md#t30--expo-sdk-57-patch-và-uiscene-2026-10-09) — Expo57.0.27/RN0.86.3 và scene lifecycle; 157 tests/typecheck/lint mobile/Android bundle, npm ci dry-run, unsigned iOS Release Xcode27 và built scene manifest PASS. Doctor20/21 chỉ còn hai lockfile. Chưa test bản mới trên máy thật; bỏ qua iPhone 8 Plus, không đóng các gate gameplay rộng hơn.

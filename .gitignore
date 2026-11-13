@@ -62,3 +62,9 @@ tasks/evidence/**
 !tasks/evidence/**/
 !tasks/evidence/**/*.md
 tasks/review/sdk58-logs/
+
+# Release keystore: generated locally, never committed (this repository is public).
+keystore/*
+!keystore/README.md
+!keystore/create-keystore.sh
+!keystore/signing.properties.example

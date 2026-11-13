@@ -4,6 +4,9 @@ export interface ReconnectCredential {
   readonly roomCode: string;
   readonly sessionId: string;
   readonly reconnectToken: string;
+  readonly transport?: 'lan';
+  readonly address?: string;
+  readonly isHost?: boolean;
 }
 
 interface SecureStoreLike {
@@ -20,6 +23,10 @@ export async function readReconnectCredential(storage: SecureStoreLike = SecureS
   try {
     const value = JSON.parse(raw) as Partial<ReconnectCredential>;
     if (typeof value.roomCode !== 'string' || typeof value.sessionId !== 'string' || typeof value.reconnectToken !== 'string') return null;
+    if (value.transport === 'lan') {
+      if (typeof value.address !== 'string' || typeof value.isHost !== 'boolean') return null;
+      return { roomCode: value.roomCode, sessionId: value.sessionId, reconnectToken: value.reconnectToken, transport: 'lan', address: value.address, isHost: value.isHost };
+    }
     return { roomCode: value.roomCode, sessionId: value.sessionId, reconnectToken: value.reconnectToken };
   } catch { return null; }
 }

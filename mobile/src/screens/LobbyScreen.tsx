@@ -3,11 +3,13 @@ import { AppState, Image, ImageBackground, Pressable, ScrollView, Share, StyleSh
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import { createOnlineRoomClient } from '../game/colyseus-client';
+import { createRoomClient, roomEntryRoute, lanSessionInfo } from '../game/room-client';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
 import type { RoomProjection } from '@rps-cards/game-core';
 import { deleteReconnectCredential } from '../security/reconnect-credential';
+import { LanQrCode } from '../components/LanQrCode';
+import { encodeLanQr } from '../lan/address';
 import { FolkButton } from '../components/FolkButton';
 import { FolkSurface } from '../components/FolkSurface';
 import { folkAssets } from '../ui/folk-assets';
@@ -26,12 +28,13 @@ export function LobbyScreen() {
   reducedRef.current = reducedMotion;
   const flash = useSharedValue(0);
   const [snapshot, setSnapshot] = useState<RoomProjection | null>(null);
-  const client = useMemo(() => createOnlineRoomClient(), []);
+  const client = useMemo(() => createRoomClient(), []);
+  const lan = lanSessionInfo();
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const highlightStyle = useAnimatedStyle(() => ({ opacity: reducedMotion ? ((snapshot?.players.length ?? 1) > 1 ? 1 : 0) : flash.value }));
   useEffect(() => { if (reducedMotion) { cancelAnimation(flash); flash.value = 0; } }, [flash, reducedMotion]);
   useEffect(() => {
-    if (!params.roomCode || !params.sessionId) { router.replace('/rooms'); return; }
+    if (!params.roomCode || !params.sessionId) { router.replace(roomEntryRoute()); return; }
     let active = true;
     let polling = false;
     let previousPresent: boolean | null = null;
@@ -74,7 +77,7 @@ export function LobbyScreen() {
     try { await client.leave(params.roomCode!, params.sessionId!); } catch { /* heartbeat expiry closes an unreachable room */ }
     await deleteReconnectCredential();
     setActiveRoom(null);
-    router.replace('/rooms');
+    router.replace(roomEntryRoute());
   };
   return (
     <FolkSurface background="village" contentStyle={styles.surface}>
@@ -86,9 +89,15 @@ export function LobbyScreen() {
           <Text selectable adjustsFontSizeToFit numberOfLines={1} style={styles.code}>{params.roomCode}</Text>
           <View style={styles.shareRow}>
           <Pressable accessibilityRole="button" accessibilityLabel={text('copyCode')} style={styles.copy} onPress={() => { feedback.play('ui-tap'); void Clipboard.setStringAsync(params.roomCode ?? '').catch(() => undefined); }}><Image source={folkAssets.icons.copy} style={styles.copyIcon} /><Text style={styles.copyText}>{text('copyCode')}</Text></Pressable>
-          <Pressable testID="lobby-share" accessibilityRole="button" accessibilityLabel={text('shareCode')} style={styles.copy} onPress={() => { feedback.play('ui-tap'); void Share.share({ message: `${text('shareMessage')} ${params.roomCode ?? ''}` }).catch(() => undefined); }}><Text style={styles.copyText}>↗ {text('shareCode')}</Text></Pressable>
+          <Pressable testID="lobby-share" accessibilityRole="button" accessibilityLabel={text('shareCode')} style={styles.copy} onPress={() => { feedback.play('ui-tap'); void Share.share({ message: `${text('shareMessage')} ${params.roomCode ?? ''}${lan ? ` ${lan.host}:${lan.port}` : ''}` }).catch(() => undefined); }}><Text style={styles.copyText}>↗ {text('shareCode')}</Text></Pressable>
           </View>
         </ImageBackground>
+        {lan?.isHost ? <View style={styles.lanInvitation}>
+          <Pressable accessibilityRole="button" accessibilityLabel={text('lanCopyAddress')} style={styles.copy} onPress={() => void Clipboard.setStringAsync(`${lan.host}:${lan.port}`).catch(() => undefined)}><Text selectable style={styles.copyText}>{lan.host}:{lan.port}</Text></Pressable>
+          <LanQrCode value={encodeLanQr(lan)} label={text('lanQrLabel')} />
+          <Text style={styles.lanHint}>{text('lanVisible')}</Text>
+          <Text style={styles.lanHint}>{text('lanKeepOpen')}</Text>
+        </View> : null}
         <View style={styles.players}>
           <ImageBackground source={folkAssets.controls.paperPanel} resizeMode="stretch" style={styles.playerPanel}>
             <Text style={styles.playerTitle}>{text('you')}</Text>
@@ -123,6 +132,8 @@ const styles = StyleSheet.create({
   shareRow: { flexDirection: 'row', justifyContent: 'center' },
   copyIcon: { height: 24, width: 24 },
   copyText: { color: '#8A241A', fontWeight: '800' },
+  lanInvitation: { backgroundColor: '#F7E6B0', borderColor: '#8C5A2C', borderWidth: 2, borderRadius: 12, padding: 12, width: 310, maxWidth: '100%', gap: 8 },
+  lanHint: { color: '#5A3521', textAlign: 'center', fontSize: 14, fontWeight: '700' },
   players: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: -4, maxWidth: '100%', width: 332 },
   playerPanel: { alignItems: 'center', flex: 1, height: 250, justifyContent: 'center', maxWidth: 220, paddingHorizontal: 20, paddingVertical: 28 },
   highlight: { borderColor: '#D6A73A', borderRadius: 12, borderWidth: 2, bottom: 22, left: 12, position: 'absolute', right: 12, top: 22 },

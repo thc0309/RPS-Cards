@@ -6,6 +6,16 @@ export interface InterstitialProvider {
   readonly attempt: (timeoutMs: number) => Promise<AdOutcome>;
 }
 
+/**
+ * Real ad unit ids are used only in release builds. Development and any build
+ * without a configured id show Google's test ad, so running or testing the app
+ * never produces real impressions or clicks on the live account.
+ */
+export function resolveInterstitialUnitId(testId: string, configured = process.env.EXPO_PUBLIC_AD_INTERSTITIAL_ID, isDev = __DEV__): string {
+  const id = configured?.trim();
+  return !isDev && id && /^ca-app-pub-\d+\/\d+$/.test(id) ? id : testId;
+}
+
 function nativeProvider(): InterstitialProvider {
   try {
     // Keep the native import at the boundary so unit tests and web never load a native module.
@@ -16,7 +26,7 @@ function nativeProvider(): InterstitialProvider {
       readonly TestIds: { readonly INTERSTITIAL: string };
     };
     return { attempt: (timeoutMs) => new Promise<AdOutcome>((resolve) => {
-      const ad = native.InterstitialAd.createForAdRequest(native.TestIds.INTERSTITIAL);
+      const ad = native.InterstitialAd.createForAdRequest(resolveInterstitialUnitId(native.TestIds.INTERSTITIAL));
       const instance = `interstitial-${++adSequence}`;
       let settled = false;
       let retired = false;

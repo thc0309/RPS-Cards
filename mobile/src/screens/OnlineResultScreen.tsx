@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { CardKind, RoomProjection } from '@rps-cards/game-core';
 import { FolkResultLoadingView, FolkResultView } from '../components/FolkGameViews';
-import { createOnlineRoomClient } from '../game/colyseus-client';
+import { createRoomClient, roomEntryRoute } from '../game/room-client';
 import { interstitialGate } from '../ads/interstitial-gate';
 import { translate } from '../i18n';
 import { deleteReconnectCredential } from '../security/reconnect-credential';
@@ -21,7 +21,7 @@ export function OnlineResultScreen() {
   const params = useLocalSearchParams<{ roomCode?: string; sessionId?: string }>();
   const locale = useAppStore((state) => state.locale);
   const setActiveRoom = useAppStore((state) => state.setActiveRoom);
-  const client = useMemo(() => createOnlineRoomClient(), []);
+  const client = useMemo(() => createRoomClient(), []);
   const [snapshot, setSnapshot] = useState<RoomProjection | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -37,7 +37,7 @@ export function OnlineResultScreen() {
   }, []);
 
   useEffect(() => {
-    if (!params.roomCode || !params.sessionId) { router.replace('/rooms'); return; }
+    if (!params.roomCode || !params.sessionId) { router.replace(roomEntryRoute()); return; }
     let active = true;
     let polling = false;
     const poll = async () => { if (polling) return; polling = true; try { const next = await client.snapshot(params.roomCode!, params.sessionId!); if (active) receive(next); } catch { if (active) router.replace({ pathname: '/reconnecting', params: { roomCode: params.roomCode, sessionId: params.sessionId } }); } finally { polling = false; } };

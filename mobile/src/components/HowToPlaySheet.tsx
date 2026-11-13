@@ -31,6 +31,7 @@ export function HowToPlaySheet({ visible, onClose }: { readonly visible: boolean
             <Text style={styles.stepText}>{text(step.key)}</Text>
           </View>)}
           <Text style={styles.tip}>{text('howTip')}</Text>
+          <Text style={styles.tip}>{text('lanWifiHint')}</Text>
         </ScrollView>
         <FolkButton accessibilityLabel={text('gotIt')} onPress={onClose} style={styles.button}>{text('gotIt')}</FolkButton>
       </View>

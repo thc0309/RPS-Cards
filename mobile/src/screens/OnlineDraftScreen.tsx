@@ -4,7 +4,7 @@ import type { CardKind, RoomProjection } from '@rps-cards/game-core';
 import { FolkDraftView } from '../components/FolkGameViews';
 import { FolkLoadingView } from '../components/FolkLoadingView';
 import { acceptBoardSnapshot } from '../game/board-round-presentation';
-import { createOnlineRoomClient } from '../game/colyseus-client';
+import { createRoomClient, roomEntryRoute } from '../game/room-client';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/app-store';
 import { useCountdownSeconds } from '../ui/countdown';
@@ -24,7 +24,7 @@ export function OnlineDraftScreen() {
   const snapshotRef = useRef<RoomProjection | null>(null);
   const pickedPosition = useRef<number | null>(null);
   const active = useRef(false);
-  const client = useMemo(() => createOnlineRoomClient(), []);
+  const client = useMemo(() => createRoomClient(), []);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const remaining = useCountdownSeconds(snapshot?.deadlineAt === undefined ? undefined : snapshot.deadlineAt - clockOffset);
 
@@ -41,7 +41,7 @@ export function OnlineDraftScreen() {
   receiveRef.current = receive;
 
   useEffect(() => {
-    if (!roomCode || !sessionId) { router.replace('/rooms'); return; }
+    if (!roomCode || !sessionId) { router.replace(roomEntryRoute()); return; }
     active.current = true;
     let polling = false;
     const poll = async () => {

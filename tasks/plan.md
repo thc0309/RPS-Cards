@@ -922,3 +922,14 @@ ReconnectingScreen giữ nguyên vì routing đã xử lý các pha này. Retry 
 rồi trả projection mới, không giữ timestamp/projection cache cũ. Timing giữ nguyên
 800/600/1200/300ms; fake clocks xác minh authority, video không được dùng làm chuẩn
 FPS hoặc khẳng định chính xác từng frame giữa hai thiết bị.
+
+
+## REQ-LAN-20261113 — LAN rooms + QR (2026-11-13)
+
+Source of truth: [request + F8 addendum](review/REQ-LAN-20261113.md).
+Shared authority is now `@rps-cards/game-core/room`, with server/device crypto injection;
+mobile uses one active-session transport factory for existing Lobby/Draft/Board/Result/reconnect screens.
+LAN entry supports bounded mDNS discovery, strict local-address and QR joins, no hosted Internet dependency.
+Automated tests/typecheck/lint and Android CNG arm64 normal/debug-sign release builds pass;
+controlled two-phone gameplay evidence remains in progress in the [report](review/2026-11-13-lan-report.md).
+Hotspot hardware, iOS and physical camera scanning remain separate unverified gates.

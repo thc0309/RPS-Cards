@@ -62,7 +62,8 @@ export function HomeScreen() {
         <Image accessibilityRole="image" accessibilityLabel={text('homeTitle')} source={folkAssets.controls.logo} resizeMode="contain" style={{ width: logoWidth, height: logoWidth / 1.5 }} />
         <View style={styles.actions}>
           <FolkButton cue="paper-slide" icon={folkAssets.icons.bot} accessibilityLabel={text('playBot')} onPress={() => router.push('/draft')}>{text('playBot')}</FolkButton>
-          <FolkButton cue="paper-slide" variant="blue" icon={folkAssets.icons.joinDoor} accessibilityLabel={text('onlineRooms')} onPress={() => router.push('/rooms')}>{text('onlineRooms')}</FolkButton>
+          <FolkButton cue="paper-slide" variant="blue" icon={folkAssets.icons.joinDoor} accessibilityLabel={text('lanPlay')} onPress={() => router.push('/lan')}>{text('lanPlay')}</FolkButton>
+          {process.env.EXPO_PUBLIC_ONLINE_ENABLED === '1' ? <FolkButton cue="paper-slide" variant="blue" icon={folkAssets.icons.joinDoor} accessibilityLabel={text('onlineRooms')} onPress={() => router.push('/rooms')}>{text('onlineRooms')}</FolkButton> : null}
         </View>
         <View style={styles.secondary}>
           <Pressable testID="home-how-to-play" accessibilityRole="button" accessibilityLabel={text('howToPlay')} style={styles.pill} onPress={() => { feedback.play('ui-tap'); setHowToOpen(true); }}>

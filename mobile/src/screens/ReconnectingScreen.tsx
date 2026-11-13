@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { createOnlineRoomClient } from '../game/colyseus-client';
+import { createRoomClient, restoreRoomClient, roomEntryRoute, roomReconnectFailure } from '../game/room-client';
 import { translate } from '../i18n';
 import { deleteReconnectCredential, readReconnectCredential } from '../security/reconnect-credential';
 import { useAppStore } from '../store/app-store';
@@ -66,11 +66,11 @@ export function ReconnectingScreen() {
       const credential = await readReconnectCredential();
       if (!active) return;
       if (!credential || (params.roomCode && credential.roomCode !== params.roomCode) || (params.sessionId && credential.sessionId !== params.sessionId)) {
-        if (active) router.replace('/rooms');
+        if (active) router.replace(roomEntryRoute());
         return;
       }
       if (cueEligible && AppState.currentState === 'active') feedback.play('connection-lost', { scope: 'reconnecting', expiresAt: entryExpiresAt });
-      const client = createOnlineRoomClient();
+      const client = await restoreRoomClient(credential);
       let attempt = 0;
       while (active && Date.now() < deadline) {
         try {
@@ -89,7 +89,7 @@ export function ReconnectingScreen() {
             await deleteReconnectCredential();
             if (!active) return;
             setActiveRoom(null);
-            router.replace({ pathname: '/rooms', params: { error: 'ROOM_EXPIRED' } });
+            router.replace({ pathname: roomEntryRoute(), params: { error: 'ROOM_EXPIRED' } });
             return;
           }
         }
@@ -97,9 +97,12 @@ export function ReconnectingScreen() {
         if (remainingMs <= 0) break;
         if (!await waitForRetry(Math.min(RETRY_DELAYS_MS[Math.min(attempt++, RETRY_DELAYS_MS.length - 1)], remainingMs))) return;
       }
-      if (active) router.replace('/rooms');
+      if (active) {
+        await deleteReconnectCredential(); setActiveRoom(null);
+        router.replace(roomReconnectFailure());
+      }
     };
-    void run().catch(() => { if (active) router.replace('/rooms'); });
+    void run().catch(() => { if (active) router.replace(roomReconnectFailure()); });
     return () => {
       active = false;
       releaseWait?.();
@@ -110,11 +113,11 @@ export function ReconnectingScreen() {
   const leave = async () => {
     try {
       const credential = await readReconnectCredential();
-      if (credential) await createOnlineRoomClient().leave(credential.roomCode, credential.sessionId);
+      if (credential) await createRoomClient().leave(credential.roomCode, credential.sessionId);
     } catch { /* the reservation expires on its own when the server is unreachable */ }
     try { await deleteReconnectCredential(); } catch { /* nothing stored */ }
     setActiveRoom(null);
-    router.replace('/rooms');
+    router.replace(roomEntryRoute());
   };
   return <FolkReconnectingView title={text('reconnecting')} body={text('reconnectingBody')} remaining={remaining} statusStyle={statusStyle} leaveLabel={text('leaveRoom')} onLeave={() => void leave()} />;
 }

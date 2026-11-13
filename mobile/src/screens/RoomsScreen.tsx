@@ -4,6 +4,7 @@ import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming
 import { useRouter } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import { setLanRoom } from '../game/room-client';
 import { createOnlineRoomClient } from '../game/colyseus-client';
 import { createRoomEntryFlow, type RoomEntryError } from '../game/room-entry';
 import { translate } from '../i18n';
@@ -35,6 +36,7 @@ export function RoomsScreen() {
   const [busy, setBusy] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<ReconnectCredential | null>(null);
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  useEffect(() => { setLanRoom(undefined); }, []);
   const flow = useMemo(() => createRoomEntryFlow(createOnlineRoomClient(), entryWithoutAd, {
     saveCredential: (credential) => saveReconnectCredential(credential),
     openLobby: (roomCode, sessionId) => {
@@ -52,7 +54,7 @@ export function RoomsScreen() {
   }), [feedback, flash, router, setActiveRoom]);
   useEffect(() => {
     mounted.current = true;
-    void readReconnectCredential().then((credential) => { if (mounted.current) setCurrentRoom(credential); }).catch(() => undefined);
+    void readReconnectCredential().then((credential) => { if (mounted.current) setCurrentRoom(credential?.transport === 'lan' ? null : credential); }).catch(() => undefined);
     const subscription = AppState.addEventListener('change', (state) => {
       if (state !== 'active') { cancelAnimation(flash); flash.value = 0; }
     });
